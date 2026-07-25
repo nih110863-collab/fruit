@@ -24,7 +24,28 @@ export type DailyItem = {
   remaining: number | null
   has_image: boolean
   image_version: number
+
+  /** 세일가 (없으면 null) */
+  sale_price: number | null
+  /** 'HH:MM' — 세일 시간대. 비어 있으면 하루 종일 */
+  sale_from: string | null
+  sale_to: string | null
+  /** 지금 세일가가 적용되는 중 */
+  sale_active: boolean
+  /** 세일이 예정되어 있고 아직 시작 전 */
+  sale_upcoming: boolean
+  /** 지금 실제로 팔리는 가격 (세일 중이면 세일가) */
+  effective_price: number
+  highlight: Highlight | null
 }
+
+export type Highlight = 'timesale' | 'limited' | 'best'
+
+export const HIGHLIGHTS: { key: Highlight; label: string; title: string }[] = [
+  { key: 'timesale', label: '타임세일', title: '⏰ 타임세일' },
+  { key: 'limited', label: '한정수량세일', title: '🔥 한정수량 세일' },
+  { key: 'best', label: '오늘의 베스트', title: '⭐ 오늘의 베스트' },
+]
 
 export type Customer = {
   id: number

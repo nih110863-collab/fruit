@@ -64,10 +64,7 @@ export default async function OrderPage({
           </p>
         </div>
       ) : (
-        <>
-          <h2 className="mb-1 text-sm font-bold text-stone-600">오늘의 품목</h2>
-          <OrderForm items={items} defaultAddress={customer.address ?? ''} />
-        </>
+        <OrderForm items={items} defaultAddress={customer.address ?? ''} />
       )}
 
       {myOrders.length > 0 && (

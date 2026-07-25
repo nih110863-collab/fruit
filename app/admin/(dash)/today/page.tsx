@@ -8,6 +8,7 @@ import {
   updateDailyItem,
 } from '../../actions'
 import { listDailyItems, listProducts, previousSaleDate } from '@/lib/queries'
+import { HIGHLIGHTS } from '@/lib/types'
 import { formatDate, todayKST, won } from '@/lib/util'
 
 export const dynamic = 'force-dynamic'
@@ -187,36 +188,90 @@ export default async function TodayPage({
                 </div>
 
                 <div className="mt-2.5 flex flex-wrap items-end gap-2">
-                  <form action={updateDailyItem} className="flex flex-1 flex-wrap items-end gap-2">
+                  <form action={updateDailyItem} className="flex-1 space-y-2">
                     <input type="hidden" name="id" value={it.id} />
-                    <div className="w-28">
-                      <label className="label text-xs">가격</label>
-                      <input
-                        name="price"
-                        className="input py-2 text-sm"
-                        inputMode="numeric"
-                        defaultValue={it.price}
-                      />
+
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="w-28">
+                        <label className="label text-xs">정가</label>
+                        <input
+                          name="price"
+                          className="input py-2 text-sm"
+                          inputMode="numeric"
+                          defaultValue={it.price}
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="label text-xs">제한</label>
+                        <input
+                          name="limit_qty"
+                          className="input py-2 text-sm"
+                          inputMode="numeric"
+                          placeholder="무제한"
+                          defaultValue={it.limit_qty ?? ''}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <label className="label text-xs">순서</label>
+                        <input
+                          name="sort_order"
+                          className="input py-2 text-sm"
+                          inputMode="numeric"
+                          defaultValue={it.sort_order}
+                        />
+                      </div>
                     </div>
-                    <div className="w-24">
-                      <label className="label text-xs">제한</label>
-                      <input
-                        name="limit_qty"
-                        className="input py-2 text-sm"
-                        inputMode="numeric"
-                        placeholder="무제한"
-                        defaultValue={it.limit_qty ?? ''}
-                      />
+
+                    <div className="flex flex-wrap items-end gap-2 rounded-xl bg-stone-50 p-2">
+                      <div className="w-28">
+                        <label className="label text-xs">세일가</label>
+                        <input
+                          name="sale_price"
+                          className="input py-2 text-sm"
+                          inputMode="numeric"
+                          placeholder="없음"
+                          defaultValue={it.sale_price ?? ''}
+                        />
+                      </div>
+                      <div className="w-28">
+                        <label className="label text-xs">세일 시작</label>
+                        <input
+                          type="time"
+                          name="sale_from"
+                          className="input py-2 text-sm"
+                          defaultValue={it.sale_from ?? ''}
+                        />
+                      </div>
+                      <div className="w-28">
+                        <label className="label text-xs">세일 종료</label>
+                        <input
+                          type="time"
+                          name="sale_to"
+                          className="input py-2 text-sm"
+                          defaultValue={it.sale_to ?? ''}
+                        />
+                      </div>
+                      <div className="w-36">
+                        <label className="label text-xs">노출 구역</label>
+                        <select
+                          name="highlight"
+                          className="input py-2 text-sm"
+                          defaultValue={it.highlight ?? ''}
+                        >
+                          <option value="">일반</option>
+                          {HIGHLIGHTS.map((h) => (
+                            <option key={h.key} value={h.key}>
+                              {h.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="w-full text-[11px] text-stone-400">
+                        세일 시간을 비우면 하루 종일 세일가로 팝니다. 노출 구역을 고르면
+                        고객 화면 맨 위 특별 구역에 올라갑니다.
+                      </p>
                     </div>
-                    <div className="w-20">
-                      <label className="label text-xs">순서</label>
-                      <input
-                        name="sort_order"
-                        className="input py-2 text-sm"
-                        inputMode="numeric"
-                        defaultValue={it.sort_order}
-                      />
-                    </div>
+
                     <button type="submit" className="btn-ghost btn-sm">
                       저장
                     </button>

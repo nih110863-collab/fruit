@@ -32,8 +32,14 @@ export async function saveOrder(input: SaveOrderInput): Promise<SaveOrderResult>
   try {
     return await withTx(async (q) => {
       // 1) 대상 품목 잠금
+      // 가격은 화면에서 받은 값을 믿지 않고, 세일 시간대까지 따져 여기서 다시 계산한다
       const items = await q(
-        `select di.id, di.price, di.limit_qty, di.is_active, di.product_id, p.name, p.unit
+        `select di.id,
+                case when di.sale_price is not null
+                      and (di.sale_starts_at is null or now() >= di.sale_starts_at)
+                      and (di.sale_ends_at is null or now() < di.sale_ends_at)
+                     then di.sale_price else di.price end as price,
+                di.limit_qty, di.is_active, di.product_id, p.name, p.unit
            from daily_items di
            join products p on p.id = di.product_id
           where di.id = any($1::int[]) and di.sale_date = $2::date

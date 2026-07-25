@@ -206,15 +206,39 @@ export async function quickAddItem(formData: FormData) {
   refresh()
 }
 
+const HIGHLIGHT_KEYS = ['timesale', 'limited', 'best']
+
+/** 'HH:MM' 형식만 통과 */
+function timeOfDay(v: FormDataEntryValue | null): string {
+  const s = String(v ?? '').trim()
+  return /^\d{2}:\d{2}$/.test(s) ? s : ''
+}
+
 export async function updateDailyItem(formData: FormData) {
   await requireAdmin()
   const id = num(formData.get('id'))
   if (!id) return
+
+  const highlight = String(formData.get('highlight') ?? '')
+  const from = timeOfDay(formData.get('sale_from'))
+  const to = timeOfDay(formData.get('sale_to'))
+
+  // 세일 시각은 판매 날짜 기준 한국 시간으로 해석해 timestamptz 로 저장한다
   await sql`
     update daily_items
        set price = ${num(formData.get('price'))},
            limit_qty = ${optionalNum(formData.get('limit_qty'))},
-           sort_order = ${num(formData.get('sort_order'))}
+           sort_order = ${num(formData.get('sort_order'))},
+           sale_price = ${optionalNum(formData.get('sale_price'))},
+           sale_starts_at = case
+             when ${from} = '' then null
+             else (sale_date::text || ' ' || ${from})::timestamp at time zone 'Asia/Seoul'
+           end,
+           sale_ends_at = case
+             when ${to} = '' then null
+             else (sale_date::text || ' ' || ${to})::timestamp at time zone 'Asia/Seoul'
+           end,
+           highlight = ${HIGHLIGHT_KEYS.includes(highlight) ? highlight : null}
      where id = ${id}
   `
   refresh()

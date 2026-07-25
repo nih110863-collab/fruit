@@ -66,7 +66,7 @@ export default function AdminOrderForm({
     () =>
       lines.reduce((sum, l) => {
         const item = items.find((i) => i.id === l.dailyItemId)
-        return sum + (item ? item.price * l.qty : 0)
+        return sum + (item ? item.effective_price * l.qty : 0)
       }, 0),
     [lines, items],
   )
@@ -215,7 +215,15 @@ export default function AdminOrderForm({
                       )}
                     </div>
                     <p className="text-sm text-stone-500">
-                      {won(item.price)} / {item.unit}
+                      {item.sale_active && (
+                        <span className="mr-1 text-xs text-stone-400 line-through">
+                          {item.price.toLocaleString('ko-KR')}
+                        </span>
+                      )}
+                      <span className={item.sale_active ? 'font-semibold text-red-600' : ''}>
+                        {won(item.effective_price)}
+                      </span>{' '}
+                      / {item.unit}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">

@@ -78,6 +78,14 @@ alter table customers add column if not exists pin_hash text;
 alter table customers add column if not exists pin_fail_count integer not null default 0;
 alter table customers add column if not exists pin_locked_until timestamptz;
 
+-- 세일가와 노출 구역.
+-- sale_price 가 있고 시간대 안에 들어오면 그 가격으로 판다 (시간대가 비면 하루 종일).
+-- highlight: timesale | limited | best — 고객 화면 위쪽 특별 구역에 어떻게 배치할지
+alter table daily_items add column if not exists sale_price integer;
+alter table daily_items add column if not exists sale_starts_at timestamptz;
+alter table daily_items add column if not exists sale_ends_at timestamptz;
+alter table daily_items add column if not exists highlight text;
+
 -- 품목 사진. 업로드 시 정사각형으로 잘라 900px JPEG 으로 줄인 뒤 저장한다.
 -- image_version 은 URL 캐시 무효화용 (사진을 바꾸면 +1 → 새 URL → CDN 이 새로 받아감)
 alter table products add column if not exists image_data bytea;

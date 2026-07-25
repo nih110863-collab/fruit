@@ -32,6 +32,15 @@ export async function listDailyItems(saleDate: string, onlyActive = false): Prom
            di.is_active,
            (p.image_data is not null) as has_image,
            p.image_version,
+           di.sale_price,
+           di.highlight,
+           to_char(di.sale_starts_at at time zone 'Asia/Seoul', 'HH24:MI') as sale_from,
+           to_char(di.sale_ends_at at time zone 'Asia/Seoul', 'HH24:MI') as sale_to,
+           (di.sale_price is not null
+             and (di.sale_starts_at is null or now() >= di.sale_starts_at)
+             and (di.sale_ends_at is null or now() < di.sale_ends_at)) as sale_active,
+           (di.sale_price is not null
+             and di.sale_starts_at is not null and now() < di.sale_starts_at) as sale_upcoming,
            coalesce(sum(oi.qty) filter (where o.status = 'confirmed'), 0)::int as ordered_qty
     from daily_items di
     join products p on p.id = di.product_id
@@ -45,6 +54,7 @@ export async function listDailyItems(saleDate: string, onlyActive = false): Prom
   return (rows as any[]).map((r) => ({
     ...r,
     remaining: r.limit_qty === null ? null : Math.max(0, r.limit_qty - r.ordered_qty),
+    effective_price: r.sale_active ? r.sale_price : r.price,
   })) as DailyItem[]
 }
 
