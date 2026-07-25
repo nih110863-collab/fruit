@@ -90,7 +90,11 @@ export async function getCustomer(id: number): Promise<Customer | null> {
   return (rows[0] as Customer) ?? null
 }
 
-/** 첫 화면 고객 명단. 휴대폰 뒷자리는 마지막 2자리만 힌트로 보여준다. */
+/**
+ * 첫 화면 고객 명단.
+ * 닉네임만 보여준다. 단 같은 닉네임이 둘 이상이면 서로 구분할 수 없으므로,
+ * 그 경우에만 뒷 4자리를 함께 표시한다 (닉네임+뒷4자리 조합은 유일함이 보장됨).
+ */
 export async function listCustomerDirectory(): Promise<DirectoryEntry[]> {
   const rows = await sql`
     select c.id,
@@ -103,10 +107,16 @@ export async function listCustomerDirectory(): Promise<DirectoryEntry[]> {
      group by c.id
      order by last_order_id desc nulls last, c.nickname
   `
+
+  const seen = new Map<string, number>()
+  for (const r of rows as any[]) {
+    seen.set(r.nickname, (seen.get(r.nickname) ?? 0) + 1)
+  }
+
   return (rows as any[]).map((r) => ({
     id: r.id,
     nickname: r.nickname,
-    hint: `··${String(r.phone_last4).slice(-2)}`,
+    hint: (seen.get(r.nickname) ?? 0) > 1 ? String(r.phone_last4) : '',
     has_pin: r.has_pin,
   }))
 }
