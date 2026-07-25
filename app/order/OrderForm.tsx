@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { placeOrder, type FormState } from '../actions'
+import CartSheet from './CartSheet'
 import ItemCard from '@/components/ItemCard'
 import ItemFilters from '@/components/ItemFilters'
 import { categoriesOf, matches, pickSection } from '@/lib/sections'
@@ -36,6 +37,13 @@ export default function OrderForm({
   const [fulfillment, setFulfillment] = useState<'pickup' | 'delivery'>('pickup')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
+  const [cartOpen, setCartOpen] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+  }, [])
 
   const categories = useMemo(() => categoriesOf(items), [items])
   const filtering = Boolean(query.trim() || category)
@@ -65,7 +73,14 @@ export default function OrderForm({
     setQtys((prev) => {
       const current = prev[item.id] ?? 0
       const max = item.remaining === null ? 99 : Math.min(99, item.remaining)
-      return { ...prev, [item.id]: Math.max(0, Math.min(max, current + delta)) }
+      const next = Math.max(0, Math.min(max, current + delta))
+      // 담을 때마다 바로 눈에 띄는 확인 표시를 준다 — 실수로 눌렀는지 바로 알 수 있게
+      if (delta > 0 && next > current) {
+        setToast(`${item.name} ${next}개 담았어요`)
+        if (toastTimer.current) clearTimeout(toastTimer.current)
+        toastTimer.current = setTimeout(() => setToast(null), 1400)
+      }
+      return { ...prev, [item.id]: next }
     })
   }
 
@@ -192,6 +207,14 @@ export default function OrderForm({
         </div>
       </div>
 
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-40 flex justify-center px-5">
+          <div className="animate-toast-in rounded-full bg-stone-900/90 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+            {toast}
+          </div>
+        </div>
+      )}
+
       <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 px-5 pb-6 pt-4 backdrop-blur">
         <div className="mx-auto max-w-md space-y-2.5">
           {state.error && (
@@ -199,15 +222,33 @@ export default function OrderForm({
               {state.error}
             </p>
           )}
-          <div className="flex items-baseline justify-between text-sm">
-            <span className="text-stone-500">
-              {lines.length > 0 ? `${lines.length}가지 담음` : '담은 품목 없음'}
+          <button
+            type="button"
+            onClick={() => lines.length > 0 && setCartOpen(true)}
+            className="flex w-full items-baseline justify-between text-sm"
+          >
+            <span
+              className={
+                lines.length > 0 ? 'font-semibold text-brand-700 underline underline-offset-2' : 'text-stone-500'
+              }
+            >
+              {lines.length > 0 ? `${lines.length}가지 담음 · 내역 보기` : '담은 품목 없음'}
             </span>
             <span className="text-lg font-bold">{won(total)}</span>
-          </div>
+          </button>
           <SubmitButton total={total} count={lines.length} />
         </div>
       </div>
+
+      {cartOpen && (
+        <CartSheet
+          items={items}
+          qtys={qtys}
+          total={total}
+          onChange={bump}
+          onClose={() => setCartOpen(false)}
+        />
+      )}
     </form>
   )
 }
