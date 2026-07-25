@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createCustomer, deleteCustomer, updateCustomer } from '../../actions'
+import { createCustomer, deleteCustomer, resetCustomerPin, updateCustomer } from '../../actions'
 import { listCustomers } from '@/lib/queries'
 import { formatDate, won } from '@/lib/util'
 
@@ -97,6 +97,12 @@ export default async function CustomersPage({
                     <span className="text-sm text-stone-400">{c.phone_last4}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    {!c.has_pin && (
+                      <span className="badge bg-sky-100 text-sky-800">비번 미설정</span>
+                    )}
+                    {c.pin_locked_until && new Date(c.pin_locked_until) > new Date() && (
+                      <span className="badge bg-red-100 text-red-700">잠김</span>
+                    )}
                     {c.unpaid_amount > 0 && (
                       <span className="badge bg-amber-100 text-amber-800">
                         미입금 {won(c.unpaid_amount)}
@@ -110,6 +116,7 @@ export default async function CustomersPage({
 
                 <p className="mt-1 text-xs text-stone-500">
                   최근 주문 {c.last_order_date ? formatDate(c.last_order_date) : '없음'}
+                  {!c.has_pin && ' · 첫 접속 때 본인이 비밀번호를 정합니다'}
                 </p>
 
                 <details className="mt-2">
@@ -164,7 +171,15 @@ export default async function CustomersPage({
                   ) : (
                     <span />
                   )}
-                  <div className="flex shrink-0 gap-1.5">
+                  <div className="flex shrink-0 flex-wrap gap-1.5">
+                    {c.has_pin && (
+                      <form action={resetCustomerPin}>
+                        <input type="hidden" name="id" value={c.id} />
+                        <button type="submit" className="btn-ghost btn-sm">
+                          비번 초기화
+                        </button>
+                      </form>
+                    )}
                     <Link href={`/admin/orders?customer=${c.id}`} className="btn-ghost btn-sm">
                       주문 내역
                     </Link>

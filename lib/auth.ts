@@ -64,6 +64,23 @@ export async function requireAdmin(): Promise<void> {
   if (!(await isAdmin())) redirect('/admin/login')
 }
 
+/* ---------- 고객 비밀번호(4자리 PIN) ---------- */
+
+/**
+ * PIN 원문은 저장하지 않는다. SESSION_SECRET 을 키로 쓴 HMAC 만 보관하므로
+ * DB만 유출되어도 PIN 을 되돌릴 수 없다. 고객 id 를 섞어 같은 번호를 써도 해시가 달라진다.
+ */
+export function hashPin(customerId: number, pin: string): string {
+  return createHmac('sha256', SECRET).update(`pin:${customerId}:${pin}`).digest('base64url')
+}
+
+export function verifyPinHash(customerId: number, pin: string, stored: string | null): boolean {
+  if (!stored) return false
+  const a = Buffer.from(hashPin(customerId, pin))
+  const b = Buffer.from(stored)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
 /* ---------- 고객 ---------- */
 
 export async function startCustomerSession(customerId: number) {

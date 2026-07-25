@@ -2,26 +2,95 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { endCustomerSession, getCustomerId, startCustomerSession } from '@/lib/auth'
+import {
+  endCustomerSession,
+  getCustomerId,
+  hashPin,
+  startCustomerSession,
+  verifyPinHash,
+} from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { findOrCreateCustomer } from '@/lib/queries'
+import { getCustomer } from '@/lib/queries'
 import { saveOrder } from '@/lib/orders'
-import { normalizeLast4, normalizeNickname, todayKST } from '@/lib/util'
+import { todayKST } from '@/lib/util'
 import type { CartLine } from '@/lib/types'
 
 export type FormState = { error?: string }
 
-/** 회원가입 없이 닉네임 + 휴대폰 뒷 4자리로 입장 (없으면 자동 등록) */
-export async function enterShop(_prev: FormState, formData: FormData): Promise<FormState> {
-  const nickname = normalizeNickname(String(formData.get('nickname') ?? ''))
-  const last4 = normalizeLast4(String(formData.get('phone_last4') ?? ''))
+const MAX_FAILS = 5
+const LOCK_MINUTES = 5
 
-  if (nickname.length < 1) return { error: '닉네임(이름)을 입력해주세요.' }
-  if (nickname.length > 20) return { error: '닉네임은 20자 이내로 입력해주세요.' }
-  if (last4.length !== 4) return { error: '휴대폰 뒷 4자리를 숫자로 입력해주세요.' }
+function readPin(formData: FormData, field = 'pin'): string {
+  return String(formData.get(field) ?? '').replace(/\D/g, '').slice(0, 4)
+}
 
-  const customer = await findOrCreateCustomer(nickname, last4)
-  await startCustomerSession(customer.id)
+function lockMessage(until: Date): string {
+  const mins = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 60000))
+  return `비밀번호를 여러 번 틀렸습니다. ${mins}분 뒤에 다시 시도해주세요.`
+}
+
+/** 명단에서 고른 고객이 처음이라 비밀번호가 없을 때, 본인이 직접 정한다 */
+export async function createPin(_prev: FormState, formData: FormData): Promise<FormState> {
+  const customerId = Number(formData.get('customer_id'))
+  const pin = readPin(formData)
+  const confirm = readPin(formData, 'pin_confirm')
+
+  if (!Number.isInteger(customerId)) return { error: '고객 정보를 찾지 못했습니다.' }
+  if (pin.length !== 4) return { error: '숫자 4자리로 정해주세요.' }
+  if (pin !== confirm) return { error: '두 번 입력한 번호가 다릅니다. 다시 해주세요.' }
+
+  // pin_hash 가 비어 있을 때만 설정된다 — 이미 정한 사람의 비번을 남이 덮어쓸 수 없다
+  const rows = await sql`
+    update customers
+       set pin_hash = ${hashPin(customerId, pin)}, pin_fail_count = 0, pin_locked_until = null
+     where id = ${customerId} and pin_hash is null
+    returning id
+  `
+  if (!rows.length) return { error: '이미 비밀번호가 등록된 분입니다. 번호를 입력해주세요.' }
+
+  await startCustomerSession(customerId)
+  redirect('/order')
+}
+
+/** 명단에서 고른 고객이 4자리 비밀번호로 입장 */
+export async function enterWithPin(_prev: FormState, formData: FormData): Promise<FormState> {
+  const customerId = Number(formData.get('customer_id'))
+  const pin = readPin(formData)
+
+  if (!Number.isInteger(customerId)) return { error: '고객 정보를 찾지 못했습니다.' }
+  if (pin.length !== 4) return { error: '숫자 4자리를 입력해주세요.' }
+
+  const customer = await getCustomer(customerId)
+  if (!customer) return { error: '고객 정보를 찾지 못했습니다.' }
+
+  const lockedUntil = customer.pin_locked_until ? new Date(customer.pin_locked_until) : null
+  if (lockedUntil && lockedUntil.getTime() > Date.now()) {
+    return { error: lockMessage(lockedUntil) }
+  }
+
+  if (!verifyPinHash(customerId, pin, customer.pin_hash ?? null)) {
+    const rows = await sql`
+      update customers
+         set pin_fail_count = pin_fail_count + 1,
+             pin_locked_until = case
+               when pin_fail_count + 1 >= ${MAX_FAILS}
+                 then now() + (${LOCK_MINUTES} || ' minutes')::interval
+               else null
+             end
+       where id = ${customerId}
+      returning pin_fail_count, pin_locked_until
+    `
+    const left = MAX_FAILS - Number(rows[0]?.pin_fail_count ?? 0)
+    if (left <= 0 && rows[0]?.pin_locked_until) {
+      return { error: lockMessage(new Date(rows[0].pin_locked_until)) }
+    }
+    return { error: `비밀번호가 맞지 않습니다. (${left}번 더 틀리면 잠깁니다)` }
+  }
+
+  await sql`
+    update customers set pin_fail_count = 0, pin_locked_until = null where id = ${customerId}
+  `
+  await startCustomerSession(customerId)
   redirect('/order')
 }
 

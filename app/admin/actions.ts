@@ -343,6 +343,19 @@ export async function createCustomer(formData: FormData) {
   refresh()
 }
 
+/** 고객이 비밀번호를 잊었을 때 — 지우면 다음 접속에서 본인이 새로 정한다 */
+export async function resetCustomerPin(formData: FormData) {
+  await requireAdmin()
+  const id = num(formData.get('id'))
+  if (!id) return
+  await sql`
+    update customers
+       set pin_hash = null, pin_fail_count = 0, pin_locked_until = null
+     where id = ${id}
+  `
+  refresh()
+}
+
 export async function deleteCustomer(formData: FormData) {
   await requireAdmin()
   const id = num(formData.get('id'))

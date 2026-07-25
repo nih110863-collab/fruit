@@ -28,6 +28,17 @@ export type Customer = {
   phone_last4: string
   address: string | null
   memo: string | null
+  pin_hash?: string | null
+  pin_fail_count?: number
+  pin_locked_until?: string | null
+}
+
+/** 고객 명단 화면에 뿌리는 최소 정보 (뒷자리는 마지막 2자리만 노출) */
+export type DirectoryEntry = {
+  id: number
+  nickname: string
+  hint: string
+  has_pin: boolean
 }
 
 export type OrderItem = {

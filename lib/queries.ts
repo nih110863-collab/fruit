@@ -1,7 +1,7 @@
 import 'server-only'
 import { sql } from './db'
 import { toDateString } from './util'
-import type { Customer, DailyItem, Order, OrderItem, Product } from './types'
+import type { Customer, DailyItem, DirectoryEntry, Order, OrderItem, Product } from './types'
 
 /* ---------- 품목 마스터 ---------- */
 
@@ -83,10 +83,32 @@ export async function getCustomer(id: number): Promise<Customer | null> {
   return (rows[0] as Customer) ?? null
 }
 
+/** 첫 화면 고객 명단. 휴대폰 뒷자리는 마지막 2자리만 힌트로 보여준다. */
+export async function listCustomerDirectory(): Promise<DirectoryEntry[]> {
+  const rows = await sql`
+    select c.id,
+           c.nickname,
+           c.phone_last4,
+           (c.pin_hash is not null) as has_pin,
+           max(o.id) as last_order_id
+      from customers c
+      left join orders o on o.customer_id = c.id
+     group by c.id
+     order by last_order_id desc nulls last, c.nickname
+  `
+  return (rows as any[]).map((r) => ({
+    id: r.id,
+    nickname: r.nickname,
+    hint: `··${String(r.phone_last4).slice(-2)}`,
+    has_pin: r.has_pin,
+  }))
+}
+
 export async function listCustomers(q?: string) {
   const like = q ? `%${q.trim()}%` : null
   const rows = await sql`
     select c.*,
+           (c.pin_hash is not null) as has_pin,
            count(o.id) filter (where o.status = 'confirmed')::int as order_count,
            coalesce(sum(o.total_amount) filter (where o.status = 'confirmed'), 0)::int as total_spent,
            coalesce(sum(o.total_amount) filter (where o.status = 'confirmed' and o.is_paid = false), 0)::int as unpaid_amount,
