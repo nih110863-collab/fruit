@@ -61,7 +61,7 @@ export default async function AdminHome() {
           <ul className="mt-1.5 flex flex-wrap gap-2">
             {lowStock.map((i) => (
               <li key={i.id} className="badge bg-white text-amber-800">
-                {i.name} {i.remaining === 0 ? '마감' : `${i.remaining}${i.unit}`}
+                {i.name} {i.remaining === 0 ? '마감' : `${i.remaining}개`}
               </li>
             ))}
           </ul>
@@ -77,8 +77,7 @@ export default async function AdminHome() {
                 <li key={p.product_name} className="flex justify-between gap-3 py-2 text-sm">
                   <span className="truncate">{p.product_name}</span>
                   <span className="shrink-0 font-bold tabular-nums">
-                    {p.qty}
-                    {p.unit}
+                    {p.qty}개
                     <span className="ml-2 font-normal text-stone-400">{won(p.amount)}</span>
                   </span>
                 </li>

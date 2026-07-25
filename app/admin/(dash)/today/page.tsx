@@ -1,3 +1,4 @@
+import CategorySelect from '@/components/CategorySelect'
 import ProductImage from '@/components/ProductImage'
 import {
   addProductsToDate,
@@ -31,6 +32,9 @@ export default async function TodayPage({
 
   const usedIds = new Set(items.map((i) => i.product_id))
   const available = products.filter((p) => !usedIds.has(p.id))
+  const categories = Array.from(
+    new Set(products.map((p) => p.category).filter((c): c is string => Boolean(c))),
+  )
 
   return (
     <div className="space-y-6">
@@ -93,9 +97,7 @@ export default async function TodayPage({
                       className="size-4 accent-emerald-700"
                     />
                     <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
-                    <span className="shrink-0 text-xs text-stone-500">
-                      {won(p.default_price)}/{p.unit}
-                    </span>
+                    <span className="shrink-0 text-xs text-stone-500">{won(p.default_price)}</span>
                   </label>
                 </li>
               ))}
@@ -119,12 +121,8 @@ export default async function TodayPage({
             <input name="name" className="input" placeholder="예) 햇감자" required maxLength={40} />
           </div>
           <div>
-            <label className="label">단위</label>
-            <input name="unit" className="input" placeholder="개 / 봉 / 팩" defaultValue="개" maxLength={10} />
-          </div>
-          <div>
-            <label className="label">분류 (선택)</label>
-            <input name="category" className="input" placeholder="과일 / 채소" maxLength={20} />
+            <label className="label">분류</label>
+            <CategorySelect categories={categories} />
           </div>
           <div>
             <label className="label">가격 (원)</label>
@@ -173,7 +171,6 @@ export default async function TodayPage({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
                         <span className="truncate font-bold">{it.name}</span>
-                        <span className="text-xs text-stone-400">/{it.unit}</span>
                         {!it.is_active && (
                           <span className="badge bg-stone-200 text-stone-600">숨김</span>
                         )}
@@ -185,7 +182,7 @@ export default async function TodayPage({
                                 : 'bg-amber-100 text-amber-800'
                             }`}
                           >
-                            {it.remaining === 0 ? '마감' : `${it.remaining}${it.unit} 남음`}
+                            {it.remaining === 0 ? '마감' : `${it.remaining}개 남음`}
                           </span>
                         )}
                         {it.remaining === 0 && (
@@ -212,10 +209,7 @@ export default async function TodayPage({
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-stone-500">
-                        주문됨 {it.ordered_qty}
-                        {it.unit}
-                      </p>
+                      <p className="mt-0.5 text-xs text-stone-500">주문됨 {it.ordered_qty}개</p>
                     </div>
 
                     <div className="flex shrink-0 gap-1">

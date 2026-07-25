@@ -68,8 +68,7 @@ export default function ItemCard({
               left <= 3 ? 'bg-amber-500 text-white' : 'bg-white/90 text-stone-600'
             }`}
           >
-            {left}
-            {item.unit} 남음
+            {left}개 남음
           </span>
         )}
       </div>
@@ -90,9 +89,8 @@ export default function ItemCard({
             </span>
           )}
           <span className={`font-bold ${onSale ? 'text-red-600' : 'text-stone-800'}`}>
-            {item.effective_price.toLocaleString('ko-KR')}
+            {item.effective_price.toLocaleString('ko-KR')}원
           </span>
-          <span className="text-stone-400">/{item.unit}</span>
         </p>
 
         {onChange && (

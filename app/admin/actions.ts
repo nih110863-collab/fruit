@@ -9,6 +9,7 @@ import {
   startAdminSession,
 } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import { downloadImage } from '@/lib/imageSearch'
 import { saveOrder } from '@/lib/orders'
 import { nicknameTaken, resolveCustomer } from '@/lib/queries'
 import { normalizeLast4, normalizeNickname, todayKST } from '@/lib/util'
@@ -59,16 +60,15 @@ export async function createProduct(formData: FormData) {
   await requireAdmin()
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return
-  const unit = String(formData.get('unit') ?? '개').trim() || '개'
   const price = num(formData.get('default_price'))
   const category = String(formData.get('category') ?? '').trim() || null
 
+  // 단위는 더 이상 고르지 않는다 — 전부 '개'로 통일
   await sql`
     insert into products (name, unit, default_price, category)
-    values (${name}, ${unit}, ${price}, ${category})
+    values (${name}, '개', ${price}, ${category})
     on conflict (name) do update
-      set unit = excluded.unit,
-          default_price = excluded.default_price,
+      set default_price = excluded.default_price,
           category = excluded.category,
           is_archived = false
   `
@@ -84,7 +84,6 @@ export async function updateProduct(formData: FormData) {
   await sql`
     update products
        set name = ${name},
-           unit = ${String(formData.get('unit') ?? '개').trim() || '개'},
            default_price = ${num(formData.get('default_price'))},
            category = ${String(formData.get('category') ?? '').trim() || null}
      where id = ${id}
@@ -154,6 +153,34 @@ export async function deleteProductImage(formData: FormData) {
   refresh()
 }
 
+/**
+ * 무료 이미지 검색(Openverse) 결과 중 하나를 품목 사진으로 등록한다.
+ * 브라우저가 아니라 서버가 직접 원본을 받아오므로 CORS 문제가 없고,
+ * 자르기/축소 없이 원본 그대로 저장한다 (화면에서는 정사각 컨테이너에 object-cover 로 채워진다).
+ */
+export async function attachImageFromUrl(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin()
+  const id = num(formData.get('product_id'))
+  const imageUrl = String(formData.get('image_url') ?? '')
+  if (!id || !imageUrl) return { error: '품목을 찾지 못했습니다.' }
+
+  try {
+    const { base64, contentType } = await downloadImage(imageUrl)
+    await sql`
+      update products
+         set image_data = decode(${base64}, 'base64'),
+             image_type = ${contentType},
+             image_version = image_version + 1
+       where id = ${id}
+    `
+    refresh()
+    return {}
+  } catch (err) {
+    console.error('attachImageFromUrl failed', err)
+    return { error: err instanceof Error ? err.message : '이미지를 등록하지 못했습니다.' }
+  }
+}
+
 /* ================= 판매일별 목록 ================= */
 
 /** 마스터에서 골라 오늘 목록에 넣기 (체크박스 다중 선택) */
@@ -182,16 +209,18 @@ export async function quickAddItem(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return
 
-  const unit = String(formData.get('unit') ?? '개').trim() || '개'
   const price = num(formData.get('price'))
   const limitQty = optionalNum(formData.get('limit_qty'))
   const category = String(formData.get('category') ?? '').trim() || null
 
+  // 새 품목은 언제나 품목함(products)에 먼저 등록되고, 그날 판매목록에도 함께 올라간다
   const rows = await sql`
     insert into products (name, unit, default_price, category)
-    values (${name}, ${unit}, ${price}, ${category})
+    values (${name}, '개', ${price}, ${category})
     on conflict (name) do update
-      set unit = excluded.unit, default_price = excluded.default_price, is_archived = false
+      set default_price = excluded.default_price,
+          category = coalesce(excluded.category, products.category),
+          is_archived = false
     returning id
   `
   const productId = rows[0].id

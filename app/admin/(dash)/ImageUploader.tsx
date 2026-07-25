@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { updateProductImage, type FormState } from '../actions'
+import ImageSearchModal from './ImageSearchModal'
 import { productImageUrl } from '@/lib/image'
 
 const MAX_SIDE = 900
@@ -48,6 +49,7 @@ export default function ImageUploader({
   const [state, formAction, isPending] = useActionState<FormState, FormData>(updateProductImage, {})
   const [preview, setPreview] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [searching, setSearching] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -73,38 +75,56 @@ export default function ImageUploader({
   const error = localError ?? state.error
 
   return (
-    <form ref={formRef} action={formAction} className="shrink-0">
-      <input type="hidden" name="product_id" value={productId} />
-      <input type="hidden" name="image" value={preview ?? ''} />
+    <div className="w-20 shrink-0">
+      <form ref={formRef} action={formAction}>
+        <input type="hidden" name="product_id" value={productId} />
+        <input type="hidden" name="image" value={preview ?? ''} />
 
-      <label className="block cursor-pointer">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          onChange={onPick}
-          disabled={isPending}
-        />
-        <span className="relative block size-20 overflow-hidden rounded-xl border border-stone-200">
-          {shown ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={shown} alt={productName} className="size-full object-cover" />
-          ) : (
-            <span className="flex size-full flex-col items-center justify-center gap-0.5 bg-stone-50 text-stone-400">
-              <span className="text-lg leading-none">＋</span>
-              <span className="text-[10px] font-semibold">사진</span>
-            </span>
-          )}
-          {isPending && (
-            <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-semibold text-stone-600">
-              올리는 중…
-            </span>
-          )}
-        </span>
-      </label>
+        <label className="block cursor-pointer">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={onPick}
+            disabled={isPending}
+          />
+          <span className="relative block size-20 overflow-hidden rounded-xl border border-stone-200">
+            {shown ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={shown} alt={productName} className="size-full object-cover" />
+            ) : (
+              <span className="flex size-full flex-col items-center justify-center gap-0.5 bg-stone-50 text-stone-400">
+                <span className="text-lg leading-none">＋</span>
+                <span className="text-[10px] font-semibold">사진</span>
+              </span>
+            )}
+            {isPending && (
+              <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-[10px] font-semibold text-stone-600">
+                올리는 중…
+              </span>
+            )}
+          </span>
+        </label>
+      </form>
+
+      <button
+        type="button"
+        onClick={() => setSearching(true)}
+        className="mt-1 block w-full truncate rounded-md border border-stone-200 py-1 text-center text-[10px] font-semibold text-stone-500 hover:bg-stone-50"
+      >
+        🔍 무료 검색
+      </button>
 
       {error && <p className="mt-1 w-20 text-[10px] leading-tight text-red-600">{error}</p>}
-    </form>
+
+      {searching && (
+        <ImageSearchModal
+          productId={productId}
+          productName={productName}
+          onClose={() => setSearching(false)}
+        />
+      )}
+    </div>
   )
 }

@@ -39,6 +39,20 @@ export type DailyItem = {
   highlight: Highlight | null
 }
 
+/** 관리자가 드롭다운에서 고르는 기본 분류. 목록에 없는 값을 새로 입력하면 그 값도 계속 쓸 수 있다. */
+export const DEFAULT_CATEGORIES = [
+  '과일',
+  '채소',
+  '정육',
+  '수산물',
+  '쌀·잡곡',
+  '유제품·계란',
+  '반찬·장류',
+  '가공식품',
+  '음료',
+  '기타',
+]
+
 export type Highlight = 'timesale' | 'limited' | 'best'
 
 export const HIGHLIGHTS: { key: Highlight; label: string; title: string }[] = [

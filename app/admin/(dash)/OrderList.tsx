@@ -62,10 +62,7 @@ export default function OrderList({
                 <li key={it.id} className="flex justify-between gap-3">
                   <span className="truncate text-stone-700">
                     {it.product_name}{' '}
-                    <span className="font-semibold text-stone-900">
-                      × {it.qty}
-                      {it.unit}
-                    </span>
+                    <span className="font-semibold text-stone-900">× {it.qty}개</span>
                   </span>
                   <span className="shrink-0 tabular-nums text-stone-500">{won(it.amount)}</span>
                 </li>

@@ -79,7 +79,7 @@ export async function saveOrder(input: SaveOrderInput): Promise<SaveOrderResult>
               error:
                 left <= 0
                   ? `'${item.name}' 은(는) 마감되었습니다.`
-                  : `'${item.name}' 은(는) ${left}${item.unit}만 남았습니다.`,
+                  : `'${item.name}' 은(는) ${left}개만 남았습니다.`,
             }
           }
         }

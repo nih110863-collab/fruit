@@ -89,8 +89,7 @@ export default async function OrderPage({
                   {o.items?.map((it) => (
                     <li key={it.id} className="flex justify-between gap-2">
                       <span className="truncate">
-                        {it.product_name} × {it.qty}
-                        {it.unit}
+                        {it.product_name} × {it.qty}개
                       </span>
                       <span className="shrink-0 tabular-nums">{won(it.amount)}</span>
                     </li>

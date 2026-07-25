@@ -207,7 +207,7 @@ export default function AdminOrderForm({
                             left === 0 ? 'bg-stone-200 text-stone-600' : 'bg-amber-100 text-amber-800'
                           }`}
                         >
-                          {left === 0 ? '남은 수량 없음' : `${left}${item.unit} 남음`}
+                          {left === 0 ? '남은 수량 없음' : `${left}개 남음`}
                         </span>
                       )}
                       {!item.is_active && (
@@ -222,8 +222,7 @@ export default function AdminOrderForm({
                       )}
                       <span className={item.sale_active ? 'font-semibold text-red-600' : ''}>
                         {won(item.effective_price)}
-                      </span>{' '}
-                      / {item.unit}
+                      </span>
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
