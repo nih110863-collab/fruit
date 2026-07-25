@@ -1,0 +1,106 @@
+# 새벽앤과일 — 고객관리 & 주문 시스템
+
+회원가입 없이 **닉네임 + 휴대폰 뒷 4자리**만으로 굴러가는 동네 장보기 주문 시스템입니다.
+고객이 직접 주문할 수도 있고, 주인이 전화·카톡으로 받은 주문을 대신 넣을 수도 있습니다.
+
+- 프레임워크: Next.js 16 (App Router, Server Actions)
+- DB: Postgres (운영은 Neon, 로컬은 일반 Postgres 자동 인식)
+- 스타일: Tailwind CSS v4
+
+---
+
+## 화면 구성
+
+### 고객 (`/`)
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `/` | 닉네임 + 휴대폰 뒷 4자리 입력 → 없는 사람이면 자동 등록 |
+| `/order` | 오늘의 품목 담기 → 픽업/배달, 픽업시간, 주소, 메모 입력 후 주문 · 내 주문 내역 확인 · 당일 미입금 주문 취소 |
+
+### 주인 (`/admin`, 비밀번호 1개)
+
+| 경로 | 하는 일 |
+| --- | --- |
+| `/admin` | 오늘 주문 건수·매출·미입금·배달 건수, **오늘 준비할 물량 합계**, 수량 임박 알림, 오늘 주문 목록 |
+| `/admin/today` | 그날 판매목록 짜기 — 품목함에서 꺼내오기 / 새 품목 즉석 등록 / **직전 판매일 목록 통째로 복사** / 가격·수량제한·순서 수정 |
+| `/admin/orders` | 날짜별 주문, 미입금만 모아보기, 고객별 주문, 입금 확인 토글, 주문 취소·삭제 |
+| `/admin/orders/new` | 주인이 고객 대신 주문 입력 (기존 고객 검색 또는 새 고객 자동 등록) |
+| `/admin/orders/[id]` | 주문 수정 (품목·수량·수령방법 전부) |
+| `/admin/products` | 품목함 — 한 번 등록한 품목을 계속 재사용. 보관함으로 숨기고 다시 꺼내기 |
+| `/admin/customers` | 고객 목록·검색, 주문 횟수/누적 금액/미입금 합계, 기본 배달주소·메모 관리 |
+
+---
+
+## 데이터 구조
+
+```
+products      품목 마스터 — 한 번 등록하면 계속 재사용
+  └ daily_items   판매일별 진열 (sale_date + product_id, 가격·수량제한을 그날 값으로)
+customers     닉네임 + 뒷 4자리 (unique), 기본 배달주소·메모
+orders        주문 (날짜, 픽업/배달, 픽업시간, 주소, 메모, 합계, 입금여부, 상태)
+  └ order_items   품목명·단가를 주문 시점 값으로 박제 (나중에 가격이 바뀌어도 기록은 그대로)
+```
+
+**품목이 매일 바뀌는 구조**: `products`(마스터)와 `daily_items`(그날 진열)를 나눠서,
+품목은 계속 쌓이고 매일 필요한 것만 꺼내 올립니다.
+
+**수량 제한**: `daily_items.limit_qty` (비우면 무제한).
+남은 수량은 그날의 확정 주문 합계를 빼서 계산하고, 주문 저장은 트랜잭션 안에서
+해당 행을 `FOR UPDATE`로 잠근 뒤 다시 세기 때문에 **동시에 마지막 1개를 담아도 한 명만 성공**합니다.
+
+---
+
+## 로컬에서 돌리기
+
+```bash
+npm install
+cp .env.example .env.local   # 값 채우기
+npm run migrate              # 테이블 생성
+npm run seed                 # (선택) 샘플 품목 8개 + 오늘 판매목록
+npm run dev
+```
+
+`.env.local` 항목:
+
+| 변수 | 설명 |
+| --- | --- |
+| `DATABASE_URL` | Postgres 연결 문자열. Neon 주소면 서버리스 드라이버, 아니면 일반 `pg` 드라이버를 자동으로 씁니다 |
+| `ADMIN_PASSWORD` | 관리자 로그인 비밀번호 |
+| `SESSION_SECRET` | 쿠키 서명용 키. `openssl rand -base64 32` |
+| `NEXT_PUBLIC_SHOP_NAME` | 화면에 표시할 가게 이름 |
+
+로컬에 Postgres가 없으면:
+
+```bash
+brew install postgresql@17 && brew services start postgresql@17
+createdb fruit_dev
+# DATABASE_URL="postgresql://$(whoami)@localhost:5432/fruit_dev"
+```
+
+---
+
+## Vercel 배포
+
+1. Vercel에서 이 GitHub 저장소를 Import
+2. **Storage → Neon(Postgres) 연결** → `DATABASE_URL` 자동 주입됨
+3. Settings → Environment Variables 에 나머지 3개 추가
+   - `ADMIN_PASSWORD`
+   - `SESSION_SECRET`
+   - `NEXT_PUBLIC_SHOP_NAME`
+4. 첫 배포 후 로컬에서 운영 DB에 테이블 생성:
+
+```bash
+DATABASE_URL="<Neon 연결 문자열>" npm run migrate
+```
+
+---
+
+## 알아둘 점
+
+- 날짜는 서버 시간대와 무관하게 **한국 시간 기준**으로 계산합니다 (`lib/util.ts`의 `todayKST`).
+- 고객 식별은 닉네임 + 뒷 4자리 조합입니다. 같은 조합이면 같은 사람으로 취급되므로,
+  동명이인이 있으면 닉네임을 `301호 민지엄마`처럼 구분되게 쓰는 편이 좋습니다.
+- 주문 이력이 있는 품목·고객은 삭제 대신 보관 처리되어 과거 기록이 남습니다.
+- 관리자 인증은 비밀번호 1개 + 서명된 쿠키(30일)입니다. 여러 직원이 각자 로그인해야 한다면
+  계정 테이블을 따로 두는 편이 낫습니다.
