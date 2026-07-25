@@ -2,19 +2,20 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import OrderForm from './OrderForm'
 import { cancelMyOrder, leaveShop } from '../actions'
+import type { EditOrderInfo } from './OrderForm'
 import ShopHeader from '@/components/ShopHeader'
 import { getCustomerId } from '@/lib/auth'
-import { getCustomer, listDailyItems, listOrdersWithItems } from '@/lib/queries'
-import { formatDate, todayKST, won } from '@/lib/util'
+import { getCustomer, getOrderCutoffTime, listDailyItems, listOrdersWithItems, recentFeed } from '@/lib/queries'
+import { formatDate, nowTimeKST, todayKST, won } from '@/lib/util'
 import type { DailyItem, Order } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * 지난 주문의 품목을 오늘 판매목록과 이름으로 매칭해 담을 수량을 만든다.
+ * 수정 대상 주문의 품목을 오늘 판매목록과 이름으로 매칭해 담을 수량을 만든다.
  * 오늘 안 파는 품목이나 품절된 품목은 제외하고, 수량 제한이 있으면 남은 만큼만 담는다.
  */
-function buildReorder(order: Order | undefined, items: DailyItem[]) {
+function matchTodaysItems(order: Order | undefined, items: DailyItem[]) {
   const qtys: Record<number, number> = {}
   const skipped: string[] = []
   if (!order?.items?.length) return { qtys, skipped }
@@ -35,7 +36,7 @@ function buildReorder(order: Order | undefined, items: DailyItem[]) {
 export default async function OrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ done?: string; reorder?: string }>
+  searchParams: Promise<{ done?: string; edited?: string; edit?: string }>
 }) {
   const customerId = await getCustomerId()
   if (!customerId) redirect('/')
@@ -43,22 +44,57 @@ export default async function OrderPage({
   const customer = await getCustomer(customerId)
   if (!customer) redirect('/')
 
-  const { done, reorder } = await searchParams
+  const { done, edited, edit } = await searchParams
   const today = todayKST()
-  const [items, myOrders] = await Promise.all([
+  const [items, myOrders, feedItems, cutoffTime] = await Promise.all([
     listDailyItems(today, true),
     listOrdersWithItems({ customerId, limit: 5 }),
+    recentFeed(),
+    getOrderCutoffTime(),
   ])
+  const orderClosed = Boolean(cutoffTime && nowTimeKST() >= cutoffTime)
 
-  const reorderTarget = reorder ? myOrders.find((o) => String(o.id) === reorder) : undefined
-  const { qtys: reorderQtys, skipped: reorderSkipped } = buildReorder(reorderTarget, items)
-  const reorderCount = Object.keys(reorderQtys).length
-  const reorderNotice = reorderTarget
-    ? reorderCount === 0
-      ? '지난 주문의 품목이 오늘은 없어서 다시 담지 못했어요.'
-      : `지난 주문을 다시 담았어요 (${reorderCount}가지)${
-          reorderSkipped.length > 0 ? ` · ${reorderSkipped.join(', ')}은(는) 오늘 없어서 제외했어요` : ''
+  // 수정은 오늘·확정·미입금 주문만 가능 (취소와 같은 조건)
+  const editTarget = edit
+    ? myOrders.find(
+        (o) => String(o.id) === edit && o.status === 'confirmed' && o.sale_date === today && !o.is_paid,
+      )
+    : undefined
+
+  // 수정 대상 주문이 이미 차지한 수량은 남은 수량에 다시 더해줘야 원래 담긴 만큼 복원된다
+  const itemsForForm = editTarget
+    ? items.map((item) => {
+        const mine = editTarget.items?.find(
+          (oi) => oi.daily_item_id === item.id || oi.product_id === item.product_id,
+        )
+        if (!mine) return item
+        return {
+          ...item,
+          ordered_qty: item.ordered_qty - mine.qty,
+          remaining: item.remaining === null ? null : item.remaining + mine.qty,
+        }
+      })
+    : items
+
+  const { qtys: activeQtys, skipped: activeSkipped } = matchTodaysItems(editTarget, itemsForForm)
+  const activeCount = Object.keys(activeQtys).length
+
+  const notice = editTarget
+    ? activeCount === 0
+      ? '이 주문의 품목이 오늘은 없어서 수정할 수 없어요. 새로 담아서 주문해주세요.'
+      : `이 주문을 수정하는 중이에요 (${activeCount}가지)${
+          activeSkipped.length > 0 ? ` · ${activeSkipped.join(', ')}은(는) 오늘 없어서 제외했어요` : ''
         }.`
+    : undefined
+
+  const editOrderInfo: EditOrderInfo | undefined = editTarget
+    ? {
+        id: editTarget.id,
+        fulfillment: editTarget.fulfillment,
+        pickupTime: editTarget.pickup_time ?? '',
+        address: editTarget.address ?? '',
+        memo: editTarget.memo ?? '',
+      }
     : undefined
 
   return (
@@ -85,6 +121,11 @@ export default async function OrderPage({
           주문이 접수됐어요. 아래 내역에서 확인할 수 있습니다.
         </p>
       )}
+      {edited && (
+        <p className="mb-5 rounded-xl bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700">
+          주문이 수정됐어요. 아래 내역에서 확인할 수 있습니다.
+        </p>
+      )}
 
       {items.length === 0 ? (
         <div className="card text-center">
@@ -96,11 +137,15 @@ export default async function OrderPage({
         </div>
       ) : (
         <OrderForm
-          key={reorder ?? 'default'}
-          items={items}
+          key={edit ?? 'default'}
+          items={itemsForForm}
           defaultAddress={customer.address ?? ''}
-          initialQtys={reorderCount > 0 ? reorderQtys : undefined}
-          reorderNotice={reorderNotice}
+          initialQtys={activeCount > 0 ? activeQtys : undefined}
+          reorderNotice={notice}
+          editOrder={editOrderInfo}
+          feedItems={feedItems}
+          closed={orderClosed}
+          cutoffTime={cutoffTime}
         />
       )}
 
@@ -146,9 +191,9 @@ export default async function OrderPage({
                 <div className="mt-2.5 flex items-center justify-between gap-1.5 border-t border-stone-100 pt-2.5">
                   <span className="font-bold">{won(o.total_amount)}</span>
                   <div className="flex shrink-0 gap-1.5">
-                    {items.length > 0 && (
-                      <Link href={`/order?reorder=${o.id}`} className="btn-ghost btn-sm">
-                        다시 담기
+                    {o.status === 'confirmed' && o.sale_date === today && !o.is_paid && (
+                      <Link href={`/order?edit=${o.id}`} className="btn-ghost btn-sm">
+                        수정
                       </Link>
                     )}
                     {o.status === 'confirmed' && o.sale_date === today && !o.is_paid && (

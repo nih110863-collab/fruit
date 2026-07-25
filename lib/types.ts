@@ -109,3 +109,7 @@ export type Order = {
 }
 
 export type CartLine = { dailyItemId: number; qty: number }
+
+/** 고객 화면 롤링 알림 한 줄 (실제 주문 · 관리자가 등록한 가짜 항목 공통 형태) */
+export type FeedItem = { nickname: string; product_name: string; qty: number }
+export type FakeFeedItem = FeedItem & { id: number; is_active: boolean }

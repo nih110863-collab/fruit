@@ -91,3 +91,23 @@ alter table daily_items add column if not exists highlight text;
 alter table products add column if not exists image_data bytea;
 alter table products add column if not exists image_type text;
 alter table products add column if not exists image_version integer not null default 0;
+
+-- 고객 화면 상단 롤링 알림에 실제 주문과 섞어 보여줄 가짜(예시) 주문 항목.
+-- 갓 오픈해 실제 주문이 적을 때 "다른 사람도 사고 있다"는 느낌을 주기 위한 관리자 도구.
+create table if not exists feed_fakes (
+  id           serial primary key,
+  nickname     text        not null,
+  product_name text        not null,
+  qty          integer     not null default 1,
+  is_active    boolean     not null default true,
+  created_at   timestamptz not null default now()
+);
+
+-- 가게 전체 설정 (싱글톤 — 항상 id=1 한 행만 존재).
+-- order_cutoff_time 이 'HH:MM' 이면 그 시각(한국시간) 이후 새 주문·주문 수정을 막는다. null 이면 마감 없음.
+create table if not exists shop_settings (
+  id                integer primary key default 1 check (id = 1),
+  order_cutoff_time text,
+  updated_at        timestamptz not null default now()
+);
+insert into shop_settings (id) values (1) on conflict (id) do nothing;

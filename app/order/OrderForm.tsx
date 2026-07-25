@@ -2,21 +2,55 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { placeOrder, type FormState } from '../actions'
+import { placeOrder, updateMyOrder, type FormState } from '../actions'
 import CartSheet from './CartSheet'
+import OrderConfirmModal from './OrderConfirmModal'
 import ItemCard from '@/components/ItemCard'
 import ItemFilters from '@/components/ItemFilters'
+import OrderFeedTicker from '@/components/OrderFeedTicker'
 import { categoriesOf, matches, pickSection } from '@/lib/sections'
-import { HIGHLIGHTS, type DailyItem } from '@/lib/types'
+import { HIGHLIGHTS, type DailyItem, type FeedItem } from '@/lib/types'
 import { won } from '@/lib/util'
 
-function SubmitButton({ total, count }: { total: number; count: number }) {
+/** '주문하기' 는 곧바로 제출하지 않고 확인 화면을 먼저 연다 */
+function ReviewButton({
+  total,
+  count,
+  isEdit,
+  closed,
+  onClick,
+}: {
+  total: number
+  count: number
+  isEdit: boolean
+  closed: boolean
+  onClick: () => void
+}) {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" className="btn-primary w-full" disabled={pending || count === 0}>
-      {pending ? '주문 넣는 중…' : count === 0 ? '품목을 담아주세요' : `${won(total)} 주문하기`}
+    <button
+      type="button"
+      onClick={onClick}
+      className="btn-primary w-full"
+      disabled={pending || count === 0 || closed}
+    >
+      {closed
+        ? '오늘 주문 마감'
+        : pending
+          ? '저장하는 중…'
+        : count === 0
+          ? '품목을 담아주세요'
+          : `${won(total)} ${isEdit ? '수정하기' : '주문하기'}`}
     </button>
   )
+}
+
+export type EditOrderInfo = {
+  id: number
+  fulfillment: 'pickup' | 'delivery'
+  pickupTime: string
+  address: string
+  memo: string
 }
 
 export default function OrderForm({
@@ -24,22 +58,42 @@ export default function OrderForm({
   defaultAddress,
   initialQtys,
   reorderNotice,
+  editOrder,
+  feedItems,
+  closed,
+  cutoffTime,
 }: {
   items: DailyItem[]
   defaultAddress: string
-  /** "다시 담기"로 들어왔을 때 미리 채울 수량 (dailyItemId → qty) */
+  /** 주문 수정으로 들어왔을 때 미리 채울 수량 (dailyItemId → qty) */
   initialQtys?: Record<number, number>
-  /** 다시 담기 결과 안내 문구 (제외된 품목이 있으면 함께 알려줌) */
+  /** 수정 결과 안내 문구 (제외된 품목이 있으면 함께 알려줌) */
   reorderNotice?: string
+  /** 있으면 새 주문이 아니라 이 주문을 고치는 모드가 된다 */
+  editOrder?: EditOrderInfo
+  feedItems: FeedItem[]
+  /** 마감 시각이 지나 새 주문·수정을 받지 않는 상태인지 */
+  closed: boolean
+  /** 화면에 안내할 마감 시각('HH:MM'), 마감이 없으면 null */
+  cutoffTime: string | null
 }) {
-  const [state, formAction] = useActionState<FormState, FormData>(placeOrder, {})
+  const [state, formAction] = useActionState<FormState, FormData>(
+    editOrder ? updateMyOrder : placeOrder,
+    {},
+  )
   const [qtys, setQtys] = useState<Record<number, number>>(() => initialQtys ?? {})
-  const [fulfillment, setFulfillment] = useState<'pickup' | 'delivery'>('pickup')
+  const [fulfillment, setFulfillment] = useState<'pickup' | 'delivery'>(editOrder?.fulfillment ?? 'pickup')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [confirmInfo, setConfirmInfo] = useState<{
+    pickupTime: string
+    address: string
+    memo: string
+  } | null>(null)
 
   useEffect(() => () => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -84,6 +138,24 @@ export default function OrderForm({
     })
   }
 
+  /** 확인 화면을 열기 전, 배달 주소처럼 브라우저가 검사해야 할 필수값부터 확인한다 */
+  function openReview() {
+    const form = formRef.current
+    if (!form) return
+    if (!form.reportValidity()) return
+    const fd = new FormData(form)
+    setConfirmInfo({
+      pickupTime: String(fd.get('pickup_time') ?? '').trim(),
+      address: String(fd.get('address') ?? '').trim(),
+      memo: String(fd.get('memo') ?? '').trim(),
+    })
+  }
+
+  function confirmAndSubmit() {
+    setConfirmInfo(null)
+    formRef.current?.requestSubmit()
+  }
+
   const grid = (list: DailyItem[]) => (
     <ul className="grid grid-cols-3 gap-2">
       {list.map((item) => (
@@ -95,8 +167,18 @@ export default function OrderForm({
   )
 
   return (
-    <form action={formAction} className="space-y-6 pb-40">
+    <form ref={formRef} action={formAction} className="space-y-6 pb-40">
       <input type="hidden" name="lines" value={JSON.stringify(lines)} />
+      {editOrder && <input type="hidden" name="order_id" value={editOrder.id} />}
+
+      <OrderFeedTicker items={feedItems} />
+
+      {closed && (
+        <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+          오늘 주문이 {cutoffTime}에 마감됐습니다. 담아두실 수는 있지만 제출은 내일 다시
+          이용해주세요.
+        </p>
+      )}
 
       {reorderNotice && (
         <p className="rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm font-medium text-brand-700">
@@ -118,7 +200,6 @@ export default function OrderForm({
         })}
 
       <section className="space-y-3">
-        <h2 className="text-base font-bold">전체 품목</h2>
         <ItemFilters
           categories={categories}
           query={query}
@@ -172,6 +253,7 @@ export default function OrderForm({
               id="pickup_time"
               name="pickup_time"
               className="input"
+              defaultValue={editOrder?.pickupTime ?? ''}
               placeholder="예) 오후 6시쯤"
               maxLength={30}
             />
@@ -185,7 +267,7 @@ export default function OrderForm({
               id="address"
               name="address"
               className="input"
-              defaultValue={defaultAddress}
+              defaultValue={editOrder?.address || defaultAddress}
               placeholder="예) 행복아파트 101동 1503호"
               maxLength={120}
               required
@@ -201,6 +283,7 @@ export default function OrderForm({
             id="memo"
             name="memo"
             className="input"
+            defaultValue={editOrder?.memo ?? ''}
             placeholder="예) 대파는 반단만 주세요"
             maxLength={200}
           />
@@ -236,7 +319,13 @@ export default function OrderForm({
             </span>
             <span className="text-lg font-bold">{won(total)}</span>
           </button>
-          <SubmitButton total={total} count={lines.length} />
+          <ReviewButton
+            total={total}
+            count={lines.length}
+            isEdit={Boolean(editOrder)}
+            closed={closed}
+            onClick={openReview}
+          />
         </div>
       </div>
 
@@ -247,6 +336,21 @@ export default function OrderForm({
           total={total}
           onChange={bump}
           onClose={() => setCartOpen(false)}
+        />
+      )}
+
+      {confirmInfo && (
+        <OrderConfirmModal
+          items={items}
+          qtys={qtys}
+          total={total}
+          fulfillment={fulfillment}
+          pickupTime={confirmInfo.pickupTime}
+          address={confirmInfo.address}
+          memo={confirmInfo.memo}
+          isEdit={Boolean(editOrder)}
+          onConfirm={confirmAndSubmit}
+          onClose={() => setConfirmInfo(null)}
         />
       )}
     </form>

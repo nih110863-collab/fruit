@@ -10,10 +10,17 @@ import {
   verifyPinHash,
 } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { getCustomer } from '@/lib/queries'
+import { getCustomer, getOrder, getOrderCutoffTime } from '@/lib/queries'
 import { saveOrder } from '@/lib/orders'
-import { todayKST } from '@/lib/util'
+import { nowTimeKST, todayKST } from '@/lib/util'
 import type { CartLine } from '@/lib/types'
+
+/** 마감 시각이 지났으면 안내 메시지를, 아니면 null 을 돌려준다. */
+async function checkOrderCutoff(): Promise<string | null> {
+  const cutoff = await getOrderCutoffTime()
+  if (!cutoff || nowTimeKST() < cutoff) return null
+  return `오늘 주문은 ${cutoff}에 마감됐습니다. 내일 다시 이용해주세요.`
+}
 
 export type FormState = { error?: string }
 
@@ -103,6 +110,9 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
   const customerId = await getCustomerId()
   if (!customerId) redirect('/')
 
+  const cutoffMessage = await checkOrderCutoff()
+  if (cutoffMessage) return { error: cutoffMessage }
+
   let lines: CartLine[] = []
   try {
     const parsed = JSON.parse(String(formData.get('lines') ?? '[]'))
@@ -141,6 +151,65 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
 
   revalidatePath('/order')
   redirect('/order?done=1')
+}
+
+/** 고객 본인이 오늘 주문을 수정 (취소와 같은 조건 — 당일 · 미입금 · 확정 상태일 때만) */
+export async function updateMyOrder(_prev: FormState, formData: FormData): Promise<FormState> {
+  const customerId = await getCustomerId()
+  if (!customerId) redirect('/')
+
+  const orderId = Number(formData.get('order_id'))
+  if (!Number.isInteger(orderId)) return { error: '주문 정보를 찾지 못했습니다.' }
+
+  const existing = await getOrder(orderId)
+  if (!existing || existing.customer_id !== customerId) {
+    return { error: '수정할 수 없는 주문입니다.' }
+  }
+  if (existing.status !== 'confirmed' || existing.is_paid || existing.sale_date !== todayKST()) {
+    return { error: '입금 완료됐거나 취소된 주문은 수정할 수 없습니다.' }
+  }
+
+  const cutoffMessage = await checkOrderCutoff()
+  if (cutoffMessage) return { error: cutoffMessage }
+
+  let lines: CartLine[] = []
+  try {
+    const parsed = JSON.parse(String(formData.get('lines') ?? '[]'))
+    if (!Array.isArray(parsed)) throw new Error('bad shape')
+    lines = parsed
+      .map((l: any) => ({ dailyItemId: Number(l?.dailyItemId), qty: Number(l?.qty) }))
+      .filter((l) => Number.isInteger(l.dailyItemId) && Number.isInteger(l.qty) && l.qty > 0)
+  } catch {
+    return { error: '주문 내용을 읽지 못했습니다. 새로고침 후 다시 시도해주세요.' }
+  }
+
+  const fulfillment = formData.get('fulfillment') === 'delivery' ? 'delivery' : 'pickup'
+  const address = String(formData.get('address') ?? '').trim()
+
+  if (fulfillment === 'delivery' && !address) {
+    return { error: '배달 주소를 입력해주세요.' }
+  }
+
+  const result = await saveOrder({
+    orderId,
+    customerId,
+    saleDate: existing.sale_date,
+    lines,
+    fulfillment,
+    pickupTime: fulfillment === 'pickup' ? String(formData.get('pickup_time') ?? '').trim() : null,
+    address: fulfillment === 'delivery' ? address : null,
+    memo: String(formData.get('memo') ?? '').trim(),
+    source: 'customer',
+  })
+
+  if (!result.ok) return { error: result.error }
+
+  if (fulfillment === 'delivery') {
+    await sql`update customers set address = ${address} where id = ${customerId}`
+  }
+
+  revalidatePath('/order')
+  redirect('/order?edited=1')
 }
 
 /** 고객 본인이 오늘 주문을 취소 (입금 완료 처리된 건은 주인만 취소 가능) */

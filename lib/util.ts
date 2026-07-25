@@ -3,6 +3,11 @@ export function todayKST(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
 }
 
+/** 지금 한국 시간을 'HH:MM' 로. 주문 마감 시각과 문자열로 바로 비교할 수 있다. */
+export function nowTimeKST(): string {
+  return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(11, 16)
+}
+
 /** 오늘(KST) 기준 n일 전 날짜. n=0 이면 오늘. */
 export function daysAgoKST(n: number): string {
   return new Date(Date.now() + 9 * 3600 * 1000 - n * 86400 * 1000).toISOString().slice(0, 10)

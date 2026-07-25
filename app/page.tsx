@@ -4,8 +4,8 @@ import CustomerPicker from './CustomerPicker'
 import HomeBrowser from './HomeBrowser'
 import ShopHeader from '@/components/ShopHeader'
 import { getCustomerId } from '@/lib/auth'
-import { listCustomerDirectory, listDailyItems } from '@/lib/queries'
-import { todayKST, formatDate } from '@/lib/util'
+import { getOrderCutoffTime, listCustomerDirectory, listDailyItems, recentFeed } from '@/lib/queries'
+import { nowTimeKST, todayKST, formatDate } from '@/lib/util'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,22 +13,24 @@ export default async function HomePage() {
   if (await getCustomerId()) redirect('/order')
 
   const today = todayKST()
-  const [items, customers] = await Promise.all([
+  const [items, customers, feedItems, cutoffTime] = await Promise.all([
     listDailyItems(today, true),
     listCustomerDirectory(),
+    recentFeed(),
+    getOrderCutoffTime(),
   ])
-  const onSale = items.filter((it) => it.remaining !== 0).length
+  const orderClosed = Boolean(cutoffTime && nowTimeKST() >= cutoffTime)
 
   return (
     <main className="mx-auto min-h-dvh max-w-md px-5 pb-32 pt-6">
-      <ShopHeader
-        subtitle={formatDate(today)}
-        right={
-          items.length > 0 ? (
-            <span className="shrink-0 text-sm font-semibold text-brand-600">오늘 {onSale}가지</span>
-          ) : undefined
-        }
-      />
+      <ShopHeader subtitle={formatDate(today)} />
+
+      {orderClosed && (
+        <p className="mb-4 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+          오늘 주문은 {cutoffTime}에 마감됐습니다. 둘러보실 수는 있고, 주문은 내일 다시
+          이용해주세요.
+        </p>
+      )}
 
       {items.length === 0 ? (
         <div className="card text-center">
@@ -39,7 +41,7 @@ export default async function HomePage() {
           </p>
         </div>
       ) : (
-        <HomeBrowser items={items} />
+        <HomeBrowser items={items} feedItems={feedItems} />
       )}
 
       <div className="mt-8 text-center">

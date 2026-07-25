@@ -514,3 +514,47 @@ export async function deleteCustomer(formData: FormData) {
   await sql`delete from customers where id = ${id}`
   refresh()
 }
+
+/* ================= 실시간 주문 알림 (가짜 항목) ================= */
+
+export async function addFakeFeedItem(formData: FormData) {
+  await requireAdmin()
+  const nickname = normalizeNickname(String(formData.get('nickname') ?? ''))
+  const productName = String(formData.get('product_name') ?? '').trim()
+  const qty = Math.max(1, num(formData.get('qty')) || 1)
+  if (!nickname || !productName) return
+
+  await sql`
+    insert into feed_fakes (nickname, product_name, qty)
+    values (${nickname}, ${productName}, ${qty})
+  `
+  refresh()
+}
+
+export async function toggleFakeFeedItem(formData: FormData) {
+  await requireAdmin()
+  const id = num(formData.get('id'))
+  if (!id) return
+  await sql`update feed_fakes set is_active = not is_active where id = ${id}`
+  refresh()
+}
+
+export async function deleteFakeFeedItem(formData: FormData) {
+  await requireAdmin()
+  const id = num(formData.get('id'))
+  if (!id) return
+  await sql`delete from feed_fakes where id = ${id}`
+  refresh()
+}
+
+/* ================= 가게 설정 ================= */
+
+/** 주문 마감 시각을 설정한다. 비워서 저장하면 마감 없이 하루 종일 주문을 받는다. */
+export async function updateOrderCutoff(formData: FormData) {
+  await requireAdmin()
+  const time = timeOfDay(formData.get('order_cutoff_time'))
+  await sql`
+    update shop_settings set order_cutoff_time = ${time || null}, updated_at = now() where id = 1
+  `
+  refresh()
+}

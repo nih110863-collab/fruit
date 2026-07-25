@@ -3,11 +3,12 @@
 import { useMemo, useState } from 'react'
 import ItemCard from '@/components/ItemCard'
 import ItemFilters from '@/components/ItemFilters'
+import OrderFeedTicker from '@/components/OrderFeedTicker'
 import { categoriesOf, matches, pickSection } from '@/lib/sections'
-import { HIGHLIGHTS, type DailyItem } from '@/lib/types'
+import { HIGHLIGHTS, type DailyItem, type FeedItem } from '@/lib/types'
 
 /** 첫 화면(로그인 전) 품목 진열 — 보기 전용 */
-export default function HomeBrowser({ items }: { items: DailyItem[] }) {
+export default function HomeBrowser({ items, feedItems }: { items: DailyItem[]; feedItems: FeedItem[] }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
 
@@ -30,6 +31,8 @@ export default function HomeBrowser({ items }: { items: DailyItem[] }) {
 
   return (
     <div className="space-y-6">
+      <OrderFeedTicker items={feedItems} />
+
       {!filtering &&
         HIGHLIGHTS.map((h) => {
           const picked = pickSection(items, h.key)
@@ -43,7 +46,6 @@ export default function HomeBrowser({ items }: { items: DailyItem[] }) {
         })}
 
       <section className="space-y-3">
-        <h2 className="text-base font-bold">전체 품목</h2>
         <ItemFilters
           categories={categories}
           query={query}

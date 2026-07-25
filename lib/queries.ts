@@ -1,7 +1,16 @@
 import 'server-only'
 import { sql } from './db'
 import { toDateString } from './util'
-import type { Customer, DailyItem, DirectoryEntry, Order, OrderItem, Product } from './types'
+import type {
+  Customer,
+  DailyItem,
+  DirectoryEntry,
+  FakeFeedItem,
+  FeedItem,
+  Order,
+  OrderItem,
+  Product,
+} from './types'
 
 /* ---------- 품목 마스터 ---------- */
 
@@ -309,4 +318,50 @@ export async function productSalesRange(from: string, to: string): Promise<Produ
      order by revenue desc
   `
   return rows as ProductSalesRow[]
+}
+
+/* ---------- 실시간 주문 알림 (롤링 티커) ---------- */
+
+/**
+ * 고객 화면 상단 롤링 알림용. 오늘 실제 주문과 관리자가 등록한 가짜 항목을 번갈아 섞는다.
+ * 정확한 시간 순서보다 "계속 움직이는 느낌"이 목적이라 절대시간은 노출하지 않는다.
+ */
+export async function recentFeed(limit = 15): Promise<FeedItem[]> {
+  const real = (await sql`
+    select c.nickname, oi.product_name, oi.qty
+      from order_items oi
+      join orders o on o.id = oi.order_id
+      join customers c on c.id = o.customer_id
+     where o.status = 'confirmed' and o.sale_date = current_date
+     order by o.created_at desc
+     limit ${limit}
+  `) as FeedItem[]
+
+  const fake = (await sql`
+    select nickname, product_name, qty
+      from feed_fakes
+     where is_active = true
+     order by id desc
+     limit ${limit}
+  `) as FeedItem[]
+
+  const merged: FeedItem[] = []
+  for (let i = 0; i < Math.max(real.length, fake.length); i++) {
+    if (real[i]) merged.push(real[i])
+    if (fake[i]) merged.push(fake[i])
+  }
+  return merged.slice(0, limit)
+}
+
+export async function listFakeFeedItems(): Promise<FakeFeedItem[]> {
+  const rows = await sql`select id, nickname, product_name, qty, is_active from feed_fakes order by id desc`
+  return rows as FakeFeedItem[]
+}
+
+/* ---------- 가게 설정 ---------- */
+
+/** 주문 마감 시각('HH:MM'). null 이면 마감 없이 하루 종일 주문 가능. */
+export async function getOrderCutoffTime(): Promise<string | null> {
+  const rows = await sql`select order_cutoff_time from shop_settings where id = 1`
+  return rows[0]?.order_cutoff_time ?? null
 }

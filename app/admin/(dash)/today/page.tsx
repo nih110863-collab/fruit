@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import CategorySelect from '@/components/CategorySelect'
 import ProductImage from '@/components/ProductImage'
 import {
@@ -38,11 +39,16 @@ export default async function TodayPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">판매목록 짜기</h1>
-        <p className="text-sm text-stone-500">
-          품목은 매일 바뀌어도, 한 번 등록한 품목은 품목함에 계속 남습니다.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">판매목록 짜기</h1>
+          <p className="text-sm text-stone-500">
+            품목은 매일 바뀌어도, 한 번 등록한 품목은 품목함에 계속 남습니다.
+          </p>
+        </div>
+        <Link href="/admin/products" className="btn-ghost btn-sm shrink-0">
+          품목함 바로가기
+        </Link>
       </div>
 
       <form method="get" className="card flex flex-wrap items-end gap-3">
