@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 import {
   endCustomerSession,
   getCustomerId,
@@ -12,8 +13,33 @@ import {
 import { sql } from '@/lib/db'
 import { getCustomer, getOrder, getOrderCutoffTime } from '@/lib/queries'
 import { saveOrder } from '@/lib/orders'
+import { formatOrderMessage, notifyOwner } from '@/lib/telegram'
 import { nowTimeKST, todayKST } from '@/lib/util'
 import type { CartLine } from '@/lib/types'
+
+/**
+ * 방금 저장된 주문을 사장님에게 텔레그램으로 알린다.
+ * revalidatePath/redirect 를 지연시키지 않도록 응답을 보낸 뒤(after) 실행하고,
+ * 실패해도 주문 자체에는 영향을 주지 않는다.
+ */
+function notifyOrderSaved(orderId: number, customerId: number, title: string) {
+  after(async () => {
+    const [customer, order] = await Promise.all([getCustomer(customerId), getOrder(orderId)])
+    if (!customer || !order) return
+    await notifyOwner(
+      formatOrderMessage({
+        title,
+        nickname: customer.nickname,
+        lines: (order.items ?? []).map((i) => ({ name: i.product_name, qty: i.qty })),
+        total: order.total_amount,
+        fulfillment: order.fulfillment,
+        pickupTime: order.pickup_time,
+        address: order.address,
+        memo: order.memo,
+      }),
+    )
+  })
+}
 
 /** 마감 시각이 지났으면 안내 메시지를, 아니면 null 을 돌려준다. */
 async function checkOrderCutoff(): Promise<string | null> {
@@ -149,6 +175,8 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
     await sql`update customers set address = ${address} where id = ${customerId}`
   }
 
+  notifyOrderSaved(result.orderId, customerId, '🛒 새 주문이 들어왔어요')
+
   revalidatePath('/order')
   redirect('/order?done=1')
 }
@@ -207,6 +235,8 @@ export async function updateMyOrder(_prev: FormState, formData: FormData): Promi
   if (fulfillment === 'delivery') {
     await sql`update customers set address = ${address} where id = ${customerId}`
   }
+
+  notifyOrderSaved(orderId, customerId, '✏️ 주문이 수정됐어요')
 
   revalidatePath('/order')
   redirect('/order?edited=1')

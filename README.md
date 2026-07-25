@@ -204,6 +204,31 @@ DATABASE_URL="<Neon 연결 문자열>" npm run migrate
 
 ---
 
+## 텔레그램 새 주문 알림
+
+고객이 주문하거나 수정할 때마다 사장님 텔레그램으로 바로 알림이 갑니다. 무료이고,
+비워두면 알림 없이 그냥 동작하니 나중에 설정해도 됩니다.
+
+1. 텔레그램 앱에서 **BotFather** 검색 → 대화 시작 → `/newbot` 전송 → 안내대로 봇 이름을
+   정하면 토큰을 줍니다 (`123456789:ABCdef...` 형태) — 이게 `TELEGRAM_BOT_TOKEN`
+2. 방금 만든 봇을 이름으로 검색해 대화를 열고 아무 메시지나 보냅니다 (예: "안녕")
+3. 브라우저에서 아래 주소를 열어 `"chat":{"id":숫자, ...}` 의 숫자를 확인 —
+   이게 `TELEGRAM_CHAT_ID`
+
+   ```
+   https://api.telegram.org/bot<위에서 받은 토큰>/getUpdates
+   ```
+
+4. Vercel Settings → Environment Variables 에 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+   추가 → Redeploy
+
+메시지에는 닉네임·품목·수량·합계·수령 방법(픽업 시간 또는 배달 주소)·메모가 들어갑니다.
+`lib/telegram.ts`가 보내는데, 응답을 지연시키지 않도록 Next 의 `after()` 로 주문
+처리가 끝난 뒤 백그라운드에서 보내고, 실패해도(토큰이 틀렸거나 네트워크 문제)
+주문 자체는 절대 막지 않습니다.
+
+---
+
 ## 알아둘 점
 
 - 날짜는 서버 시간대와 무관하게 **한국 시간 기준**으로 계산합니다 (`lib/util.ts`의 `todayKST`).
