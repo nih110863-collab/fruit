@@ -37,15 +37,25 @@ function Bar({ ratio, color = 'bg-brand-500' }: { ratio: number; color?: string 
 export default async function StatsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>
+  searchParams: Promise<{ from?: string; to?: string; back_from?: string; back_to?: string }>
 }) {
-  const { from: fromParam, to: toParam } = await searchParams
+  const { from: fromParam, to: toParam, back_from: backFromParam, back_to: backToParam } =
+    await searchParams
   const today = todayKST()
 
   const rawFrom = isValidDate(fromParam) ? fromParam : daysAgoKST(6)
   const rawTo = isValidDate(toParam) ? toParam : today
   const [from, to] = rawFrom <= rawTo ? [rawFrom, rawTo] : [rawTo, rawFrom]
   const single = from === to
+
+  // 날짜를 눌러 하루로 좁혀 들어왔을 때, 원래 보고 있던 기간을 기억해뒀다가 "돌아가기"로 되짚어간다.
+  // back_from/to 가 없으면(직접 날짜를 입력했거나 '오늘' 프리셋) 최근 7일을 기본 복귀 지점으로 삼는다.
+  const backFrom = isValidDate(backFromParam) ? backFromParam : !single ? from : daysAgoKST(6)
+  const backTo = isValidDate(backToParam) ? backToParam : !single ? to : today
+  const showBack = single && (backFrom !== from || backTo !== to)
+  // 목록에서 날짜를 눌러 들어갈 때 넘겨줄 "복귀용" 범위 — 이미 하루로 좁혀진 상태라면 그때의 backFrom/To 를 그대로 이어간다
+  const rowBackFrom = single ? backFrom : from
+  const rowBackTo = single ? backTo : to
 
   const [daily, products] = await Promise.all([
     dailySalesRange(from, to),
@@ -69,11 +79,18 @@ export default async function StatsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">매출 통계</h1>
-        <p className="text-sm text-stone-500">
-          {single ? formatDate(from) : `${formatDate(from)} ~ ${formatDate(to)}`}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold">매출 통계</h1>
+          <p className="text-sm text-stone-500">
+            {single ? formatDate(from) : `${formatDate(from)} ~ ${formatDate(to)}`}
+          </p>
+        </div>
+        {showBack && (
+          <Link href={`/admin/stats?from=${backFrom}&to=${backTo}`} className="btn-ghost btn-sm shrink-0">
+            ← {backFrom === backTo ? formatDate(backFrom) : '기간 전체'}로
+          </Link>
+        )}
       </div>
 
       <div className="card space-y-3">
@@ -130,7 +147,7 @@ export default async function StatsPage({
               {daily.map((d) => (
                 <li key={d.sale_date}>
                   <Link
-                    href={`/admin/stats?from=${d.sale_date}&to=${d.sale_date}`}
+                    href={`/admin/stats?from=${d.sale_date}&to=${d.sale_date}&back_from=${rowBackFrom}&back_to=${rowBackTo}`}
                     className="-mx-4 block rounded-lg px-4 py-2.5 transition hover:bg-stone-50"
                   >
                     <div className="flex items-center justify-between gap-2 text-sm">
