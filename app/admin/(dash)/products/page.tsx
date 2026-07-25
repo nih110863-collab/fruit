@@ -1,4 +1,11 @@
-import { createProduct, deleteProduct, toggleArchiveProduct, updateProduct } from '../../actions'
+import ImageUploader from '../ImageUploader'
+import {
+  createProduct,
+  deleteProduct,
+  deleteProductImage,
+  toggleArchiveProduct,
+  updateProduct,
+} from '../../actions'
 import { listProducts } from '@/lib/queries'
 import { won } from '@/lib/util'
 
@@ -49,7 +56,15 @@ export default async function ProductsPage() {
         ) : (
           <ul className="space-y-2">
             {active.map((p) => (
-              <li key={p.id} className="card">
+              <li key={p.id} className="card flex gap-3">
+                <ImageUploader
+                  productId={p.id}
+                  productName={p.name}
+                  hasImage={p.has_image}
+                  version={p.image_version}
+                />
+
+                <div className="min-w-0 flex-1">
                 <form action={updateProduct} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="id" value={p.id} />
                   <div className="min-w-[9rem] flex-1">
@@ -81,11 +96,19 @@ export default async function ProductsPage() {
                     저장
                   </button>
                 </form>
-                <div className="mt-2 flex items-center justify-between border-t border-stone-100 pt-2">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-2">
                   <span className="text-xs text-stone-400">
                     기본 {won(p.default_price)} / {p.unit}
                   </span>
-                  <div className="flex gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.has_image && (
+                      <form action={deleteProductImage}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <button type="submit" className="btn-ghost btn-sm">
+                          사진 삭제
+                        </button>
+                      </form>
+                    )}
                     <form action={toggleArchiveProduct}>
                       <input type="hidden" name="id" value={p.id} />
                       <button type="submit" className="btn-ghost btn-sm">
@@ -99,6 +122,7 @@ export default async function ProductsPage() {
                       </button>
                     </form>
                   </div>
+                </div>
                 </div>
               </li>
             ))}

@@ -73,3 +73,9 @@ create index if not exists order_items_daily_idx on order_items (daily_item_id);
 alter table customers add column if not exists pin_hash text;
 alter table customers add column if not exists pin_fail_count integer not null default 0;
 alter table customers add column if not exists pin_locked_until timestamptz;
+
+-- 품목 사진. 업로드 시 정사각형으로 잘라 900px JPEG 으로 줄인 뒤 저장한다.
+-- image_version 은 URL 캐시 무효화용 (사진을 바꾸면 +1 → 새 URL → CDN 이 새로 받아감)
+alter table products add column if not exists image_data bytea;
+alter table products add column if not exists image_type text;
+alter table products add column if not exists image_version integer not null default 0;

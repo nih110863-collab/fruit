@@ -5,6 +5,8 @@ export type Product = {
   default_price: number
   category: string | null
   is_archived: boolean
+  has_image: boolean
+  image_version: number
 }
 
 export type DailyItem = {
@@ -20,6 +22,8 @@ export type DailyItem = {
   ordered_qty: number
   /** limit_qty 가 null 이면 null (무제한) */
   remaining: number | null
+  has_image: boolean
+  image_version: number
 }
 
 export type Customer = {

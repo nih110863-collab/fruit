@@ -1,3 +1,4 @@
+import ProductImage from '@/components/ProductImage'
 import {
   addProductsToDate,
   copyDailyItems,
@@ -151,7 +152,15 @@ export default async function TodayPage({
         ) : (
           <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className={`card ${it.is_active ? '' : 'opacity-60'}`}>
+              <li key={it.id} className={`card flex gap-3 ${it.is_active ? '' : 'opacity-60'}`}>
+                <ProductImage
+                  productId={it.product_id}
+                  version={it.image_version}
+                  hasImage={it.has_image}
+                  name={it.name}
+                  className="size-16 shrink-0 rounded-xl"
+                />
+                <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-bold">{it.name}</span>
@@ -227,6 +236,7 @@ export default async function TodayPage({
                       </button>
                     </form>
                   </div>
+                </div>
                 </div>
               </li>
             ))}

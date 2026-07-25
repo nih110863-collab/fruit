@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import CustomerPicker from './CustomerPicker'
+import ProductImage from '@/components/ProductImage'
 import { getCustomerId } from '@/lib/auth'
 import { listCustomerDirectory, listDailyItems } from '@/lib/queries'
 import { todayKST, formatDate } from '@/lib/util'
@@ -35,23 +36,29 @@ export default async function HomePage() {
       {items.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-bold text-stone-600">오늘의 품목</h2>
-          <ul className="flex flex-wrap gap-2">
+          <ul className="grid grid-cols-3 gap-2">
             {items.map((it) => (
-              <li
-                key={it.id}
-                className={`badge border ${
-                  it.remaining === 0
-                    ? 'border-stone-200 bg-stone-100 text-stone-400 line-through'
-                    : 'border-brand-100 bg-brand-50 text-brand-700'
-                }`}
-              >
-                {it.name}
-                {it.remaining !== null && it.remaining > 0 && (
-                  <span className="ml-1 font-normal opacity-70">
-                    {it.remaining}
-                    {it.unit}
-                  </span>
-                )}
+              <li key={it.id} className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+                <div className="relative">
+                  <ProductImage
+                    productId={it.product_id}
+                    version={it.image_version}
+                    hasImage={it.has_image}
+                    name={it.name}
+                    className="aspect-square w-full"
+                    sizes="(max-width: 448px) 30vw, 140px"
+                  />
+                  {it.remaining === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-stone-900/45">
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-stone-700">
+                        마감
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="truncate px-1.5 py-1.5 text-center text-xs font-semibold text-stone-700">
+                  {it.name}
+                </p>
               </li>
             ))}
           </ul>

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { adminSaveOrder, type FormState } from '../../actions'
+import ProductImage from '@/components/ProductImage'
 import { won } from '@/lib/util'
 import type { DailyItem, Order } from '@/lib/types'
 
@@ -185,20 +186,28 @@ export default function AdminOrderForm({
             {items.map((item) => {
               const qty = qtys[item.id] ?? 0
               const soldOut = item.remaining === 0
+              const left = item.remaining === null ? null : Math.max(0, item.remaining - qty)
               return (
                 <li key={item.id} className="flex items-center gap-3 py-2.5">
+                  <ProductImage
+                    productId={item.product_id}
+                    version={item.image_version}
+                    hasImage={item.has_image}
+                    name={item.name}
+                    className="size-12 shrink-0 rounded-lg"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className={`truncate font-semibold ${soldOut ? 'text-stone-400' : ''}`}>
                         {item.name}
                       </span>
-                      {item.remaining !== null && (
+                      {left !== null && (
                         <span
-                          className={`badge shrink-0 ${
-                            soldOut ? 'bg-stone-200 text-stone-600' : 'bg-amber-100 text-amber-800'
+                          className={`badge shrink-0 tabular-nums ${
+                            left === 0 ? 'bg-stone-200 text-stone-600' : 'bg-amber-100 text-amber-800'
                           }`}
                         >
-                          {soldOut ? '마감' : `${item.remaining}${item.unit}`}
+                          {left === 0 ? '남은 수량 없음' : `${left}${item.unit} 남음`}
                         </span>
                       )}
                       {!item.is_active && (

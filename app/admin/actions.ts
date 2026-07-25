@@ -115,6 +115,45 @@ export async function deleteProduct(formData: FormData) {
   refresh()
 }
 
+/** 품목 사진 저장. 브라우저에서 정사각형으로 잘라 줄인 JPEG 을 base64 로 받는다. */
+export async function updateProductImage(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin()
+  const id = num(formData.get('product_id'))
+  const dataUrl = String(formData.get('image') ?? '')
+  if (!id) return { error: '품목을 찾지 못했습니다.' }
+
+  const match = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl)
+  if (!match) return { error: '사진을 읽지 못했습니다. 다시 선택해주세요.' }
+
+  const base64 = match[2]
+  if (Buffer.byteLength(base64, 'base64') > 2_000_000) {
+    return { error: '사진 용량이 너무 큽니다. 다시 시도해주세요.' }
+  }
+
+  // Buffer 를 그대로 넘기면 드라이버마다 처리가 달라, base64 문자열을 DB에서 디코드한다
+  await sql`
+    update products
+       set image_data = decode(${base64}, 'base64'),
+           image_type = ${match[1]},
+           image_version = image_version + 1
+     where id = ${id}
+  `
+  refresh()
+  return {}
+}
+
+export async function deleteProductImage(formData: FormData) {
+  await requireAdmin()
+  const id = num(formData.get('id'))
+  if (!id) return
+  await sql`
+    update products
+       set image_data = null, image_type = null, image_version = image_version + 1
+     where id = ${id}
+  `
+  refresh()
+}
+
 /* ================= 판매일별 목록 ================= */
 
 /** 마스터에서 골라 오늘 목록에 넣기 (체크박스 다중 선택) */

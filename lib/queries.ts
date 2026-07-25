@@ -5,10 +5,15 @@ import type { Customer, DailyItem, DirectoryEntry, Order, OrderItem, Product } f
 
 /* ---------- 품목 마스터 ---------- */
 
+// 사진 원본(bytea)은 목록 조회에서 절대 끌고 오지 않는다 — 있는지 여부만 본다
 export async function listProducts(includeArchived = false): Promise<Product[]> {
-  const rows = includeArchived
-    ? await sql`select * from products order by is_archived, category nulls last, name`
-    : await sql`select * from products where is_archived = false order by category nulls last, name`
+  const rows = await sql`
+    select id, name, unit, default_price, category, is_archived,
+           (image_data is not null) as has_image, image_version
+      from products
+     where ${includeArchived} = true or is_archived = false
+     order by is_archived, category nulls last, name
+  `
   return rows as Product[]
 }
 
@@ -25,6 +30,8 @@ export async function listDailyItems(saleDate: string, onlyActive = false): Prom
            di.limit_qty,
            di.sort_order,
            di.is_active,
+           (p.image_data is not null) as has_image,
+           p.image_version,
            coalesce(sum(oi.qty) filter (where o.status = 'confirmed'), 0)::int as ordered_qty
     from daily_items di
     join products p on p.id = di.product_id
