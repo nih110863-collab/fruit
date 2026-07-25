@@ -112,9 +112,14 @@ export function SaleSelectionProvider({
             <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">시작</span>
             <input type="time" name="sale_from" className="input px-2 py-1.5 text-sm" />
           </label>
-          <label className="w-24">
-            <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">종료</span>
-            <input type="time" name="sale_to" className="input px-2 py-1.5 text-sm" />
+          <label className="w-20">
+            <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">몇 시간</span>
+            <input
+              name="sale_hours"
+              className="input px-2 py-1.5 text-sm"
+              inputMode="numeric"
+              placeholder="예: 3"
+            />
           </label>
           <label className="w-32">
             <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">노출 구역</span>
@@ -139,7 +144,8 @@ export function SaleSelectionProvider({
         </form>
 
         <p className="text-[11px] text-stone-400">
-          시간을 비우면 하루 종일 세일가로 팝니다. 세일가를 비우고 적용하면 정가로 돌아갑니다.
+          시작 시간을 비우면 하루 종일 세일가로 팝니다. 시작 시간만 정하고 몇 시간을 비우면
+          시작 후 계속 진행됩니다(끝 시간 없음). 세일가를 비우고 적용하면 정가로 돌아갑니다.
         </p>
       </div>
 

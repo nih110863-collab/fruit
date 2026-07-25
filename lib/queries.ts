@@ -261,3 +261,52 @@ export async function pickList(saleDate: string) {
   `
   return rows as { product_name: string; unit: string; qty: number; amount: number }[]
 }
+
+/* ---------- 매출 통계 ---------- */
+
+export type DailySalesRow = {
+  sale_date: string
+  order_count: number
+  revenue: number
+  unpaid: number
+}
+
+/** 기간 내 날짜별 매출 — "일별 판매현황" 테이블용 */
+export async function dailySalesRange(from: string, to: string): Promise<DailySalesRow[]> {
+  const rows = await sql`
+    select sale_date,
+           count(*)::int as order_count,
+           coalesce(sum(total_amount), 0)::int as revenue,
+           coalesce(sum(total_amount) filter (where is_paid = false), 0)::int as unpaid
+      from orders
+     where status = 'confirmed'
+       and sale_date between ${from}::date and ${to}::date
+     group by sale_date
+     order by sale_date desc
+  `
+  return (rows as any[]).map((r) => ({ ...r, sale_date: toDateString(r.sale_date) }))
+}
+
+export type ProductSalesRow = {
+  product_name: string
+  qty: number
+  revenue: number
+  order_count: number
+}
+
+/** 기간 내 품목별 판매 합계 — "품목별 판매현황" 테이블용. from=to 로 주면 하루치 품목 리스트가 된다 */
+export async function productSalesRange(from: string, to: string): Promise<ProductSalesRow[]> {
+  const rows = await sql`
+    select oi.product_name,
+           sum(oi.qty)::int as qty,
+           sum(oi.amount)::int as revenue,
+           count(distinct oi.order_id)::int as order_count
+      from order_items oi
+      join orders o on o.id = oi.order_id
+     where o.status = 'confirmed'
+       and o.sale_date between ${from}::date and ${to}::date
+     group by oi.product_name
+     order by revenue desc
+  `
+  return rows as ProductSalesRow[]
+}

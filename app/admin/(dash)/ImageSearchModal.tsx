@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react'
 import { attachImageFromUrl, type FormState } from '../actions'
+import { guessEnglishQuery } from '@/lib/produceDictionary'
 
 type Result = {
   id: string
@@ -81,7 +82,9 @@ export default function ImageSearchModal({
   productName: string
   onClose: () => void
 }) {
-  const [query, setQuery] = useState(productName)
+  // 아는 품목이면 영어로 미리 채우고, 모르면 빈칸으로 둔다(한글로 억지 검색하지 않는다)
+  const [initialQuery] = useState(() => guessEnglishQuery(productName))
+  const [query, setQuery] = useState(initialQuery)
   const [results, setResults] = useState<Result[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,9 +107,10 @@ export default function ImageSearchModal({
     }
   }
 
-  // 처음 열릴 때 품목명으로 바로 한 번 검색해준다
+  // 영어 검색어를 추정할 수 있었을 때만 처음 열리자마자 바로 검색해준다.
+  // 못 알아낸 품목은 빈칸으로 두고 사용자가 직접 입력하게 한다.
   useEffect(() => {
-    search(productName)
+    if (initialQuery) search(initialQuery)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -153,15 +157,30 @@ export default function ImageSearchModal({
           </button>
         </form>
         <p className="px-5 pb-3 text-[11px] text-stone-400">
-          Openverse(무료 저작권 이미지) 검색입니다. 한글보다{' '}
-          <b className="text-stone-500">영어로 검색</b>하면 결과가 훨씬 많이 나와요. (예: 사과 →
-          apple)
+          Openverse(무료 저작권 이미지) 검색입니다.{' '}
+          {initialQuery ? (
+            <>
+              아는 품목이라 영어 <b className="text-stone-500">&lsquo;{initialQuery}&rsquo;</b>
+              로 미리 검색했어요.
+            </>
+          ) : (
+            <>
+              이 품목은 자동으로 채우지 못했어요. 한글보다{' '}
+              <b className="text-stone-500">영어로 검색</b>하면 결과가 훨씬 많이 나와요.
+            </>
+          )}
         </p>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
           {error && (
             <p className="mb-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
               {error}
+            </p>
+          )}
+
+          {!error && results === null && !loading && (
+            <p className="rounded-xl bg-stone-100 px-4 py-8 text-center text-sm text-stone-500">
+              검색어를 입력하고 검색을 눌러주세요.
             </p>
           )}
 

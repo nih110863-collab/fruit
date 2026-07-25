@@ -3,6 +3,16 @@ export function todayKST(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
 }
 
+/** 오늘(KST) 기준 n일 전 날짜. n=0 이면 오늘. */
+export function daysAgoKST(n: number): string {
+  return new Date(Date.now() + 9 * 3600 * 1000 - n * 86400 * 1000).toISOString().slice(0, 10)
+}
+
+/** 이번 달 1일(KST). */
+export function monthStartKST(): string {
+  return `${todayKST().slice(0, 7)}-01`
+}
+
 export function formatDate(d: string | Date): string {
   const s = typeof d === 'string' ? d : d.toISOString().slice(0, 10)
   const [y, m, day] = s.slice(0, 10).split('-')

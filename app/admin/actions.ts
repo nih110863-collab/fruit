@@ -271,9 +271,11 @@ export async function bulkSetSale(formData: FormData) {
   const highlight = String(formData.get('highlight') ?? '')
   const salePrice = optionalNum(formData.get('sale_price'))
   const from = timeOfDay(formData.get('sale_from'))
-  const to = timeOfDay(formData.get('sale_to'))
+  // 몇 시간 동안 할지 — 시작 시간이 있을 때만 의미가 있다. 비우면 시작 후 계속 진행(끝 시각 없음).
+  const hours = from === '' ? null : optionalNum(formData.get('sale_hours'))
 
-  // 세일 시각은 각 품목의 판매 날짜 기준 한국 시간으로 해석해 timestamptz 로 저장한다
+  // 세일 시각은 각 품목의 판매 날짜 기준 한국 시간으로 해석해 timestamptz 로 저장하고,
+  // 종료 시각은 시작 시각 + N시간으로 계산한다 (종료 시각을 직접 받지 않는다).
   await sql`
     update daily_items
        set sale_price = ${salePrice},
@@ -282,8 +284,9 @@ export async function bulkSetSale(formData: FormData) {
              else (sale_date::text || ' ' || ${from})::timestamp at time zone 'Asia/Seoul'
            end,
            sale_ends_at = case
-             when ${to} = '' then null
-             else (sale_date::text || ' ' || ${to})::timestamp at time zone 'Asia/Seoul'
+             when ${from} = '' or ${hours}::numeric is null then null
+             else (sale_date::text || ' ' || ${from})::timestamp at time zone 'Asia/Seoul'
+                    + (${hours}::numeric || ' hours')::interval
            end,
            highlight = ${HIGHLIGHT_KEYS.includes(highlight) ? highlight : null}
      where id = any(${ids}::int[])
