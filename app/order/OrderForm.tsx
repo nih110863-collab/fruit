@@ -64,7 +64,7 @@ export default function OrderForm({
   }
 
   const grid = (list: DailyItem[]) => (
-    <ul className="grid grid-cols-2 gap-3">
+    <ul className="grid grid-cols-3 gap-2">
       {list.map((item) => (
         <li key={item.id}>
           <ItemCard item={item} qty={qtys[item.id] ?? 0} onChange={(d) => bump(item, d)} />

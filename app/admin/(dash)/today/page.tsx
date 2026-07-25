@@ -1,12 +1,14 @@
 import ProductImage from '@/components/ProductImage'
 import {
   addProductsToDate,
+  clearDailyItemLimit,
   copyDailyItems,
   quickAddItem,
   removeDailyItem,
   toggleDailyItem,
   updateDailyItem,
 } from '../../actions'
+import { ItemCheckbox, SaleSelectionProvider } from './SaleToolbar'
 import { listDailyItems, listProducts, previousSaleDate } from '@/lib/queries'
 import { HIGHLIGHTS } from '@/lib/types'
 import { formatDate, todayKST, won } from '@/lib/util'
@@ -151,151 +153,131 @@ export default async function TodayPage({
             <p className="py-6">아직 올린 품목이 없습니다. 위에서 꺼내오거나 새로 등록해주세요.</p>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {items.map((it) => (
-              <li key={it.id} className={`card flex gap-3 ${it.is_active ? '' : 'opacity-60'}`}>
-                <ProductImage
-                  productId={it.product_id}
-                  version={it.image_version}
-                  hasImage={it.has_image}
-                  name={it.name}
-                  className="size-16 shrink-0 rounded-xl"
-                />
-                <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold">{it.name}</span>
-                    <span className="text-xs text-stone-400">/{it.unit}</span>
-                    {!it.is_active && (
-                      <span className="badge bg-stone-200 text-stone-600">숨김</span>
-                    )}
-                    {it.limit_qty !== null && (
-                      <span
-                        className={`badge ${
-                          it.remaining === 0
-                            ? 'bg-stone-200 text-stone-600'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {it.remaining === 0 ? '마감' : `${it.remaining}${it.unit} 남음`}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-stone-500">
-                    주문됨 {it.ordered_qty}
-                    {it.unit}
-                  </span>
-                </div>
-
-                <div className="mt-2.5 flex flex-wrap items-end gap-2">
-                  <form action={updateDailyItem} className="flex-1 space-y-2">
-                    <input type="hidden" name="id" value={it.id} />
-
-                    <div className="flex flex-wrap items-end gap-2">
-                      <div className="w-28">
-                        <label className="label text-xs">정가</label>
-                        <input
-                          name="price"
-                          className="input py-2 text-sm"
-                          inputMode="numeric"
-                          defaultValue={it.price}
-                        />
-                      </div>
-                      <div className="w-24">
-                        <label className="label text-xs">제한</label>
-                        <input
-                          name="limit_qty"
-                          className="input py-2 text-sm"
-                          inputMode="numeric"
-                          placeholder="무제한"
-                          defaultValue={it.limit_qty ?? ''}
-                        />
-                      </div>
-                      <div className="w-20">
-                        <label className="label text-xs">순서</label>
-                        <input
-                          name="sort_order"
-                          className="input py-2 text-sm"
-                          inputMode="numeric"
-                          defaultValue={it.sort_order}
-                        />
-                      </div>
+          <SaleSelectionProvider items={items.map((it) => ({ id: it.id, name: it.name }))}>
+            <ul className="mt-3 space-y-2">
+              {items.map((it) => (
+                <li key={it.id} className={`card ${it.is_active ? '' : 'opacity-60'}`}>
+                  <div className="flex items-start gap-2.5">
+                    <div className="flex shrink-0 items-center pt-4">
+                      <ItemCheckbox id={it.id} label={it.name} />
                     </div>
 
-                    <div className="flex flex-wrap items-end gap-2 rounded-xl bg-stone-50 p-2">
-                      <div className="w-28">
-                        <label className="label text-xs">세일가</label>
-                        <input
-                          name="sale_price"
-                          className="input py-2 text-sm"
-                          inputMode="numeric"
-                          placeholder="없음"
-                          defaultValue={it.sale_price ?? ''}
-                        />
+                    <ProductImage
+                      productId={it.product_id}
+                      version={it.image_version}
+                      hasImage={it.has_image}
+                      name={it.name}
+                      className="size-12 shrink-0 rounded-lg"
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                        <span className="truncate font-bold">{it.name}</span>
+                        <span className="text-xs text-stone-400">/{it.unit}</span>
+                        {!it.is_active && (
+                          <span className="badge bg-stone-200 text-stone-600">숨김</span>
+                        )}
+                        {it.limit_qty !== null && (
+                          <span
+                            className={`badge ${
+                              it.remaining === 0
+                                ? 'bg-stone-200 text-stone-600'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {it.remaining === 0 ? '마감' : `${it.remaining}${it.unit} 남음`}
+                          </span>
+                        )}
+                        {it.remaining === 0 && (
+                          <form action={clearDailyItemLimit}>
+                            <input type="hidden" name="id" value={it.id} />
+                            <button
+                              type="submit"
+                              className="rounded-full border border-brand-300 px-2 py-0.5 text-[11px] font-bold text-brand-700 hover:bg-brand-50"
+                              title="수량 제한을 없애 무제한으로 바꿉니다"
+                            >
+                              무제한으로 풀기
+                            </button>
+                          </form>
+                        )}
+                        {it.sale_price && (
+                          <span className="badge bg-red-100 text-red-700">
+                            세일 {won(it.sale_price)}
+                            {it.sale_from && ` ${it.sale_from}~${it.sale_to ?? ''}`}
+                          </span>
+                        )}
+                        {it.highlight && (
+                          <span className="badge bg-brand-100 text-brand-700">
+                            {HIGHLIGHTS.find((h) => h.key === it.highlight)?.label}
+                          </span>
+                        )}
                       </div>
-                      <div className="w-28">
-                        <label className="label text-xs">세일 시작</label>
-                        <input
-                          type="time"
-                          name="sale_from"
-                          className="input py-2 text-sm"
-                          defaultValue={it.sale_from ?? ''}
-                        />
-                      </div>
-                      <div className="w-28">
-                        <label className="label text-xs">세일 종료</label>
-                        <input
-                          type="time"
-                          name="sale_to"
-                          className="input py-2 text-sm"
-                          defaultValue={it.sale_to ?? ''}
-                        />
-                      </div>
-                      <div className="w-36">
-                        <label className="label text-xs">노출 구역</label>
-                        <select
-                          name="highlight"
-                          className="input py-2 text-sm"
-                          defaultValue={it.highlight ?? ''}
-                        >
-                          <option value="">일반</option>
-                          {HIGHLIGHTS.map((h) => (
-                            <option key={h.key} value={h.key}>
-                              {h.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <p className="w-full text-[11px] text-stone-400">
-                        세일 시간을 비우면 하루 종일 세일가로 팝니다. 노출 구역을 고르면
-                        고객 화면 맨 위 특별 구역에 올라갑니다.
+                      <p className="mt-0.5 text-xs text-stone-500">
+                        주문됨 {it.ordered_qty}
+                        {it.unit}
                       </p>
                     </div>
 
-                    <button type="submit" className="btn-ghost btn-sm">
+                    <div className="flex shrink-0 gap-1">
+                      <form action={toggleDailyItem}>
+                        <input type="hidden" name="id" value={it.id} />
+                        <button type="submit" className="btn-ghost btn-sm px-2">
+                          {it.is_active ? '숨김' : '보임'}
+                        </button>
+                      </form>
+                      <form action={removeDailyItem}>
+                        <input type="hidden" name="id" value={it.id} />
+                        <button type="submit" className="btn-ghost btn-sm px-2 text-red-600">
+                          내리기
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                  <form action={updateDailyItem} className="mt-2 flex items-end gap-1.5 pl-[1.875rem]">
+                    <input type="hidden" name="id" value={it.id} />
+                    <label className="w-24">
+                      <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">
+                        정가
+                      </span>
+                      <input
+                        name="price"
+                        className="input px-2 py-1.5 text-sm"
+                        inputMode="numeric"
+                        defaultValue={it.price}
+                      />
+                    </label>
+                    <label className="w-20">
+                      <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">
+                        제한
+                      </span>
+                      <input
+                        name="limit_qty"
+                        className="input px-2 py-1.5 text-sm"
+                        inputMode="numeric"
+                        placeholder="무제한"
+                        defaultValue={it.limit_qty ?? ''}
+                      />
+                    </label>
+                    <label className="w-14">
+                      <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">
+                        순서
+                      </span>
+                      <input
+                        name="sort_order"
+                        className="input px-2 py-1.5 text-sm"
+                        inputMode="numeric"
+                        defaultValue={it.sort_order}
+                      />
+                    </label>
+                    <button type="submit" className="btn-ghost btn-sm px-3">
                       저장
                     </button>
                   </form>
-
-                  <div className="flex gap-1.5">
-                    <form action={toggleDailyItem}>
-                      <input type="hidden" name="id" value={it.id} />
-                      <button type="submit" className="btn-ghost btn-sm">
-                        {it.is_active ? '숨기기' : '보이기'}
-                      </button>
-                    </form>
-                    <form action={removeDailyItem}>
-                      <input type="hidden" name="id" value={it.id} />
-                      <button type="submit" className="btn-ghost btn-sm text-red-600">
-                        내리기
-                      </button>
-                    </form>
-                  </div>
-                </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </SaleSelectionProvider>
         )}
       </section>
     </div>

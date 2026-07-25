@@ -19,7 +19,7 @@ export default function HomeBrowser({ items }: { items: DailyItem[] }) {
   )
 
   const grid = (list: DailyItem[]) => (
-    <ul className="grid grid-cols-2 gap-3">
+    <ul className="grid grid-cols-3 gap-2">
       {list.map((item) => (
         <li key={item.id}>
           <ItemCard item={item} />

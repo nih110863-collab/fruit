@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
+const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'
+const shopBranch = process.env.NEXT_PUBLIC_SHOP_BRANCH
+
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일',
-  description: '회원가입 없이 닉네임과 휴대폰 뒷자리로 주문하는 동네 장보기',
+  title: shopBranch ? `${shopName} / ${shopBranch}` : shopName,
+  description: '회원가입 없이 닉네임과 비밀번호로 주문하는 동네 장보기',
 }
 
 export const viewport: Viewport = {

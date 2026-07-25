@@ -214,22 +214,40 @@ function timeOfDay(v: FormDataEntryValue | null): string {
   return /^\d{2}:\d{2}$/.test(s) ? s : ''
 }
 
+/** 가격·수량제한·순서만 다룬다. 세일/노출은 아래 상단 일괄설정 전용이다 (개별 폼에서 건드리지 않음). */
 export async function updateDailyItem(formData: FormData) {
   await requireAdmin()
   const id = num(formData.get('id'))
   if (!id) return
 
-  const highlight = String(formData.get('highlight') ?? '')
-  const from = timeOfDay(formData.get('sale_from'))
-  const to = timeOfDay(formData.get('sale_to'))
-
-  // 세일 시각은 판매 날짜 기준 한국 시간으로 해석해 timestamptz 로 저장한다
   await sql`
     update daily_items
        set price = ${num(formData.get('price'))},
            limit_qty = ${optionalNum(formData.get('limit_qty'))},
-           sort_order = ${num(formData.get('sort_order'))},
-           sale_price = ${optionalNum(formData.get('sale_price'))},
+           sort_order = ${num(formData.get('sort_order'))}
+     where id = ${id}
+  `
+  refresh()
+}
+
+/**
+ * 여러 품목을 한 번에 골라 세일가·세일 시간대·노출 구역을 적용한다.
+ * 상단 툴바에서 체크박스로 고른 daily_item id 들이 daily_item_ids 로 넘어온다.
+ */
+export async function bulkSetSale(formData: FormData) {
+  await requireAdmin()
+  const ids = formData.getAll('daily_item_ids').map((v) => num(v)).filter(Boolean)
+  if (!ids.length) return
+
+  const highlight = String(formData.get('highlight') ?? '')
+  const salePrice = optionalNum(formData.get('sale_price'))
+  const from = timeOfDay(formData.get('sale_from'))
+  const to = timeOfDay(formData.get('sale_to'))
+
+  // 세일 시각은 각 품목의 판매 날짜 기준 한국 시간으로 해석해 timestamptz 로 저장한다
+  await sql`
+    update daily_items
+       set sale_price = ${salePrice},
            sale_starts_at = case
              when ${from} = '' then null
              else (sale_date::text || ' ' || ${from})::timestamp at time zone 'Asia/Seoul'
@@ -239,7 +257,21 @@ export async function updateDailyItem(formData: FormData) {
              else (sale_date::text || ' ' || ${to})::timestamp at time zone 'Asia/Seoul'
            end,
            highlight = ${HIGHLIGHT_KEYS.includes(highlight) ? highlight : null}
-     where id = ${id}
+     where id = any(${ids}::int[])
+  `
+  refresh()
+}
+
+/** 선택한 품목의 세일·노출 설정을 한 번에 지운다 (정가로 되돌림). */
+export async function bulkClearSale(formData: FormData) {
+  await requireAdmin()
+  const ids = formData.getAll('daily_item_ids').map((v) => num(v)).filter(Boolean)
+  if (!ids.length) return
+
+  await sql`
+    update daily_items
+       set sale_price = null, sale_starts_at = null, sale_ends_at = null, highlight = null
+     where id = any(${ids}::int[])
   `
   refresh()
 }
@@ -249,6 +281,19 @@ export async function toggleDailyItem(formData: FormData) {
   const id = num(formData.get('id'))
   if (!id) return
   await sql`update daily_items set is_active = not is_active where id = ${id}`
+  refresh()
+}
+
+/**
+ * '마감' 은 실제 재고 부족이 아니라 오늘 확정된 주문이 수량 제한(limit_qty)에 도달했다는 뜻이다.
+ * 그래서 관리자가 끄고 켜는 스위치가 아니라, 제한을 풀어야 없어진다.
+ * 이 액션은 그 제한을 통째로 없애 '무제한'으로 바꾼다 — 마감 배지 옆의 '무제한으로 풀기' 버튼용.
+ */
+export async function clearDailyItemLimit(formData: FormData) {
+  await requireAdmin()
+  const id = num(formData.get('id'))
+  if (!id) return
+  await sql`update daily_items set limit_qty = null where id = ${id}`
   refresh()
 }
 

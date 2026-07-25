@@ -12,6 +12,7 @@ export default async function AdminLoginPage() {
       <h1 className="mb-1 text-center text-2xl font-bold">사장님 관리자</h1>
       <p className="mb-6 text-center text-sm text-stone-500">
         {process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'}
+        {process.env.NEXT_PUBLIC_SHOP_BRANCH && ` / ${process.env.NEXT_PUBLIC_SHOP_BRANCH}`}
       </p>
       <div className="card">
         <LoginForm />

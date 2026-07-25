@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import CustomerPicker from './CustomerPicker'
 import HomeBrowser from './HomeBrowser'
+import ShopHeader from '@/components/ShopHeader'
 import { getCustomerId } from '@/lib/auth'
 import { listCustomerDirectory, listDailyItems } from '@/lib/queries'
 import { todayKST, formatDate } from '@/lib/util'
@@ -16,20 +17,18 @@ export default async function HomePage() {
     listDailyItems(today, true),
     listCustomerDirectory(),
   ])
-  const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'
   const onSale = items.filter((it) => it.remaining !== 0).length
 
   return (
     <main className="mx-auto min-h-dvh max-w-md px-5 pb-32 pt-6">
-      <header className="mb-5 flex items-baseline justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{shopName}</h1>
-          <p className="mt-0.5 text-sm text-stone-500">{formatDate(today)}</p>
-        </div>
-        {items.length > 0 && (
-          <span className="shrink-0 text-sm font-semibold text-brand-600">오늘 {onSale}가지</span>
-        )}
-      </header>
+      <ShopHeader
+        subtitle={formatDate(today)}
+        right={
+          items.length > 0 ? (
+            <span className="shrink-0 text-sm font-semibold text-brand-600">오늘 {onSale}가지</span>
+          ) : undefined
+        }
+      />
 
       {items.length === 0 ? (
         <div className="card text-center">

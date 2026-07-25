@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import OrderForm from './OrderForm'
 import { cancelMyOrder, leaveShop } from '../actions'
+import ShopHeader from '@/components/ShopHeader'
 import { getCustomerId } from '@/lib/auth'
 import { getCustomer, listDailyItems, listOrdersWithItems } from '@/lib/queries'
 import { formatDate, todayKST, won } from '@/lib/util'
@@ -25,8 +26,6 @@ export default async function OrderPage({
     listOrdersWithItems({ customerId, limit: 5 }),
   ])
 
-  const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'
-
   return (
     <main className="mx-auto min-h-dvh max-w-md px-5 pb-6">
       {/* 누가 장보는 중인지 항상 보이게 — 다른 사람 이름으로 담는 실수를 막는다 */}
@@ -44,10 +43,7 @@ export default async function OrderPage({
         </form>
       </div>
 
-      <header className="mb-5">
-        <h1 className="text-xl font-bold">{shopName}</h1>
-        <p className="text-sm text-stone-500">{formatDate(today)}</p>
-      </header>
+      <ShopHeader subtitle={formatDate(today)} />
 
       {done && (
         <p className="mb-5 rounded-xl bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700">

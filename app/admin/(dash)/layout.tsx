@@ -13,7 +13,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <Link href="/admin" className="text-base font-bold">
-            {process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'}{' '}
+            {process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'}
+            {process.env.NEXT_PUBLIC_SHOP_BRANCH && (
+              <span className="text-stone-400"> / {process.env.NEXT_PUBLIC_SHOP_BRANCH}</span>
+            )}{' '}
             <span className="text-stone-400">관리</span>
           </Link>
           <form action={adminLogout}>
