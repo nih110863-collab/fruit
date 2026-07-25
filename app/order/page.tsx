@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import OrderForm from './OrderForm'
 import { cancelMyOrder, leaveShop } from '../actions'
@@ -5,13 +6,36 @@ import ShopHeader from '@/components/ShopHeader'
 import { getCustomerId } from '@/lib/auth'
 import { getCustomer, listDailyItems, listOrdersWithItems } from '@/lib/queries'
 import { formatDate, todayKST, won } from '@/lib/util'
+import type { DailyItem, Order } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * 지난 주문의 품목을 오늘 판매목록과 이름으로 매칭해 담을 수량을 만든다.
+ * 오늘 안 파는 품목이나 품절된 품목은 제외하고, 수량 제한이 있으면 남은 만큼만 담는다.
+ */
+function buildReorder(order: Order | undefined, items: DailyItem[]) {
+  const qtys: Record<number, number> = {}
+  const skipped: string[] = []
+  if (!order?.items?.length) return { qtys, skipped }
+
+  const byName = new Map(items.map((i) => [i.name, i]))
+  for (const oi of order.items) {
+    const item = byName.get(oi.product_name)
+    if (!item || item.remaining === 0) {
+      skipped.push(oi.product_name)
+      continue
+    }
+    const qty = item.remaining === null ? oi.qty : Math.min(oi.qty, item.remaining)
+    qtys[item.id] = (qtys[item.id] ?? 0) + qty
+  }
+  return { qtys, skipped }
+}
 
 export default async function OrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ done?: string }>
+  searchParams: Promise<{ done?: string; reorder?: string }>
 }) {
   const customerId = await getCustomerId()
   if (!customerId) redirect('/')
@@ -19,12 +43,23 @@ export default async function OrderPage({
   const customer = await getCustomer(customerId)
   if (!customer) redirect('/')
 
-  const { done } = await searchParams
+  const { done, reorder } = await searchParams
   const today = todayKST()
   const [items, myOrders] = await Promise.all([
     listDailyItems(today, true),
     listOrdersWithItems({ customerId, limit: 5 }),
   ])
+
+  const reorderTarget = reorder ? myOrders.find((o) => String(o.id) === reorder) : undefined
+  const { qtys: reorderQtys, skipped: reorderSkipped } = buildReorder(reorderTarget, items)
+  const reorderCount = Object.keys(reorderQtys).length
+  const reorderNotice = reorderTarget
+    ? reorderCount === 0
+      ? '지난 주문의 품목이 오늘은 없어서 다시 담지 못했어요.'
+      : `지난 주문을 다시 담았어요 (${reorderCount}가지)${
+          reorderSkipped.length > 0 ? ` · ${reorderSkipped.join(', ')}은(는) 오늘 없어서 제외했어요` : ''
+        }.`
+    : undefined
 
   return (
     <main className="mx-auto min-h-dvh max-w-md px-5 pb-6">
@@ -60,7 +95,13 @@ export default async function OrderPage({
           </p>
         </div>
       ) : (
-        <OrderForm items={items} defaultAddress={customer.address ?? ''} />
+        <OrderForm
+          key={reorder ?? 'default'}
+          items={items}
+          defaultAddress={customer.address ?? ''}
+          initialQtys={reorderCount > 0 ? reorderQtys : undefined}
+          reorderNotice={reorderNotice}
+        />
       )}
 
       {myOrders.length > 0 && (
@@ -102,16 +143,23 @@ export default async function OrderPage({
                   </p>
                 )}
 
-                <div className="mt-2.5 flex items-center justify-between border-t border-stone-100 pt-2.5">
+                <div className="mt-2.5 flex items-center justify-between gap-1.5 border-t border-stone-100 pt-2.5">
                   <span className="font-bold">{won(o.total_amount)}</span>
-                  {o.status === 'confirmed' && o.sale_date === today && !o.is_paid && (
-                    <form action={cancelMyOrder}>
-                      <input type="hidden" name="order_id" value={o.id} />
-                      <button className="btn-ghost btn-sm text-red-600" type="submit">
-                        주문 취소
-                      </button>
-                    </form>
-                  )}
+                  <div className="flex shrink-0 gap-1.5">
+                    {items.length > 0 && (
+                      <Link href={`/order?reorder=${o.id}`} className="btn-ghost btn-sm">
+                        다시 담기
+                      </Link>
+                    )}
+                    {o.status === 'confirmed' && o.sale_date === today && !o.is_paid && (
+                      <form action={cancelMyOrder}>
+                        <input type="hidden" name="order_id" value={o.id} />
+                        <button className="btn-ghost btn-sm text-red-600" type="submit">
+                          주문 취소
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}

@@ -86,11 +86,16 @@ export default async function StatsPage({
             {single ? formatDate(from) : `${formatDate(from)} ~ ${formatDate(to)}`}
           </p>
         </div>
-        {showBack && (
-          <Link href={`/admin/stats?from=${backFrom}&to=${backTo}`} className="btn-ghost btn-sm shrink-0">
-            ← {backFrom === backTo ? formatDate(backFrom) : '기간 전체'}로
-          </Link>
-        )}
+        <div className="flex shrink-0 gap-1.5">
+          {showBack && (
+            <Link href={`/admin/stats?from=${backFrom}&to=${backTo}`} className="btn-ghost btn-sm">
+              ← {backFrom === backTo ? formatDate(backFrom) : '기간 전체'}로
+            </Link>
+          )}
+          <a href={`/api/admin/stats-export?from=${from}&to=${to}`} className="btn-ghost btn-sm">
+            엑셀로 내보내기
+          </a>
+        </div>
       </div>
 
       <div className="card space-y-3">

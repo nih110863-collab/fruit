@@ -21,12 +21,18 @@ function SubmitButton({ total, count }: { total: number; count: number }) {
 export default function OrderForm({
   items,
   defaultAddress,
+  initialQtys,
+  reorderNotice,
 }: {
   items: DailyItem[]
   defaultAddress: string
+  /** "다시 담기"로 들어왔을 때 미리 채울 수량 (dailyItemId → qty) */
+  initialQtys?: Record<number, number>
+  /** 다시 담기 결과 안내 문구 (제외된 품목이 있으면 함께 알려줌) */
+  reorderNotice?: string
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(placeOrder, {})
-  const [qtys, setQtys] = useState<Record<number, number>>({})
+  const [qtys, setQtys] = useState<Record<number, number>>(() => initialQtys ?? {})
   const [fulfillment, setFulfillment] = useState<'pickup' | 'delivery'>('pickup')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -76,6 +82,12 @@ export default function OrderForm({
   return (
     <form action={formAction} className="space-y-6 pb-40">
       <input type="hidden" name="lines" value={JSON.stringify(lines)} />
+
+      {reorderNotice && (
+        <p className="rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm font-medium text-brand-700">
+          {reorderNotice}
+        </p>
+      )}
 
       {/* 사장님이 지정한 특별 구역 — 검색/분류 중일 때는 방해되지 않게 숨긴다 */}
       {!filtering &&
