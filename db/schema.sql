@@ -69,6 +69,10 @@ create table if not exists order_items (
 create index if not exists order_items_order_idx on order_items (order_id);
 create index if not exists order_items_daily_idx on order_items (daily_item_id);
 
+-- 닉네임은 가게 전체에서 유일해야 한다 (고객이 명단에서 자기를 못 찾으면 안 되므로).
+-- 대소문자만 다른 것도 같은 닉네임으로 본다.
+create unique index if not exists customers_nickname_unique on customers (lower(nickname));
+
 -- 고객이 직접 정하는 4자리 비밀번호 (원문은 저장하지 않고 키 해시만 보관)
 alter table customers add column if not exists pin_hash text;
 alter table customers add column if not exists pin_fail_count integer not null default 0;

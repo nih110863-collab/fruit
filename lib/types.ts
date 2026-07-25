@@ -37,11 +37,10 @@ export type Customer = {
   pin_locked_until?: string | null
 }
 
-/** 고객 명단 화면에 뿌리는 최소 정보 (뒷자리는 마지막 2자리만 노출) */
+/** 고객 명단 화면에 뿌리는 최소 정보 — 휴대폰 뒷자리는 내보내지 않는다 */
 export type DirectoryEntry = {
   id: number
   nickname: string
-  hint: string
   has_pin: boolean
 }
 

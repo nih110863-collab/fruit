@@ -28,20 +28,25 @@ export default async function OrderPage({
   const shopName = process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'
 
   return (
-    <main className="mx-auto min-h-dvh max-w-md px-5 py-6">
-      <header className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-brand-600">{formatDate(today)}</p>
-          <h1 className="text-xl font-bold">{shopName}</h1>
-          <p className="mt-0.5 text-sm text-stone-500">
-            {customer.nickname} · {customer.phone_last4}
-          </p>
-        </div>
+    <main className="mx-auto min-h-dvh max-w-md px-5 pb-6">
+      {/* 누가 장보는 중인지 항상 보이게 — 다른 사람 이름으로 담는 실수를 막는다 */}
+      <div className="sticky top-0 z-20 -mx-5 mb-4 flex items-center justify-between gap-3 bg-brand-600 px-5 py-3 text-white shadow-md">
+        <p className="min-w-0 truncate text-sm">
+          <span className="text-base font-bold">{customer.nickname}</span> 고객님 장보기중 입니다
+        </p>
         <form action={leaveShop}>
-          <button className="btn-ghost btn-sm shrink-0" type="submit">
+          <button
+            className="shrink-0 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/30"
+            type="submit"
+          >
             나가기
           </button>
         </form>
+      </div>
+
+      <header className="mb-5">
+        <h1 className="text-xl font-bold">{shopName}</h1>
+        <p className="text-sm text-stone-500">{formatDate(today)}</p>
       </header>
 
       {done && (

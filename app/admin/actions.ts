@@ -10,7 +10,7 @@ import {
 } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { saveOrder } from '@/lib/orders'
-import { findOrCreateCustomer } from '@/lib/queries'
+import { nicknameTaken, resolveCustomer } from '@/lib/queries'
 import { normalizeLast4, normalizeNickname, todayKST } from '@/lib/util'
 import type { CartLine } from '@/lib/types'
 
@@ -299,8 +299,9 @@ export async function adminSaveOrder(_prev: FormState, formData: FormData): Prom
     const last4 = normalizeLast4(String(formData.get('phone_last4') ?? ''))
     if (!nickname) return { error: '고객 닉네임을 입력해주세요.' }
     if (last4.length !== 4) return { error: '휴대폰 뒷 4자리를 입력해주세요.' }
-    const customer = await findOrCreateCustomer(nickname, last4)
-    customerId = customer.id
+    const resolved = await resolveCustomer(nickname, last4)
+    if (!resolved.ok) return { error: resolved.error }
+    customerId = resolved.customer.id
   }
 
   let lines: CartLine[] = []
@@ -351,6 +352,10 @@ export async function updateCustomer(formData: FormData) {
   const last4 = normalizeLast4(String(formData.get('phone_last4') ?? ''))
   if (!id || !nickname || last4.length !== 4) return
 
+  if (await nicknameTaken(nickname, id)) {
+    redirect(`/admin/customers?dup=${encodeURIComponent(nickname)}`)
+  }
+
   await sql`
     update customers
        set nickname = ${nickname},
@@ -368,7 +373,11 @@ export async function createCustomer(formData: FormData) {
   const last4 = normalizeLast4(String(formData.get('phone_last4') ?? ''))
   if (!nickname || last4.length !== 4) return
 
-  const customer = await findOrCreateCustomer(nickname, last4)
+  const resolved = await resolveCustomer(nickname, last4)
+  if (!resolved.ok) {
+    redirect(`/admin/customers?dup=${encodeURIComponent(nickname)}`)
+  }
+
   const address = String(formData.get('address') ?? '').trim()
   const memo = String(formData.get('memo') ?? '').trim()
   if (address || memo) {
@@ -376,7 +385,7 @@ export async function createCustomer(formData: FormData) {
       update customers
          set address = coalesce(nullif(${address}, ''), address),
              memo = coalesce(nullif(${memo}, ''), memo)
-       where id = ${customer.id}
+       where id = ${resolved.customer.id}
     `
   }
   refresh()

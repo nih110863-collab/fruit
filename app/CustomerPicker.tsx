@@ -11,7 +11,7 @@ export default function CustomerPicker({ customers }: { customers: DirectoryEntr
   const filtered = useMemo(() => {
     const q = query.trim()
     if (!q) return customers
-    return customers.filter((c) => c.nickname.includes(q) || c.hint.includes(q))
+    return customers.filter((c) => c.nickname.includes(q))
   }, [query, customers])
 
   // 시트가 열려 있는 동안 뒤 페이지가 같이 스크롤되지 않게
@@ -93,7 +93,6 @@ export default function CustomerPicker({ customers }: { customers: DirectoryEntr
                         className="flex items-center gap-2 px-3.5 py-2.5 text-sm transition hover:bg-brand-50 active:bg-brand-50"
                       >
                         <span className="min-w-0 flex-1 truncate font-semibold">{c.nickname}</span>
-                        {c.hint && <span className="shrink-0 text-xs text-stone-400">{c.hint}</span>}
                         <span className="shrink-0 text-stone-300">›</span>
                       </Link>
                     </li>

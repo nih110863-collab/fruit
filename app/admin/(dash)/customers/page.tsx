@@ -8,9 +8,9 @@ export const dynamic = 'force-dynamic'
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; dup?: string }>
 }) {
-  const { q } = await searchParams
+  const { q, dup } = await searchParams
   const customers = await listCustomers(q)
 
   return (
@@ -18,9 +18,16 @@ export default async function CustomersPage({
       <div>
         <h1 className="text-xl font-bold">고객</h1>
         <p className="text-sm text-stone-500">
-          닉네임 + 휴대폰 뒷 4자리로 구분합니다. 같은 조합은 같은 사람으로 처리됩니다.
+          닉네임은 가게에서 한 사람만 쓸 수 있습니다. 고객이 명단에서 자기를 찾아야 하니
+          <b> 301호 민지엄마</b>처럼 알아보기 쉽게 지어주세요.
         </p>
       </div>
+
+      {dup && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          &lsquo;{dup}&rsquo; 닉네임은 이미 등록되어 있습니다. 다른 닉네임으로 해주세요.
+        </p>
+      )}
 
       <form method="get" className="card flex flex-wrap items-end gap-2">
         <div className="min-w-[12rem] flex-1">

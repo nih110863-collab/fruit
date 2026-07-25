@@ -75,14 +75,46 @@ export async function findCustomer(nickname: string, last4: string): Promise<Cus
   return (rows[0] as Customer) ?? null
 }
 
-export async function findOrCreateCustomer(nickname: string, last4: string): Promise<Customer> {
+export type ResolveResult = { ok: true; customer: Customer } | { ok: false; error: string }
+
+/**
+ * 닉네임으로 고객을 찾고, 없으면 새로 만든다.
+ * 닉네임은 가게 전체에서 유일하므로, 이미 쓰는 닉네임이면 새로 만들지 않고 막는다.
+ */
+export async function resolveCustomer(nickname: string, last4: string): Promise<ResolveResult> {
+  const found = await sql`
+    select * from customers where lower(nickname) = lower(${nickname}) limit 1
+  `
+  if (found.length) {
+    const customer = found[0] as Customer
+    if (customer.phone_last4 !== last4) {
+      return {
+        ok: false,
+        error: `'${customer.nickname}' 닉네임은 이미 등록되어 있습니다 (뒷자리 ${customer.phone_last4}). 다른 닉네임을 써주세요.`,
+      }
+    }
+    return { ok: true, customer }
+  }
+
   const rows = await sql`
     insert into customers (nickname, phone_last4)
     values (${nickname}, ${last4})
-    on conflict (nickname, phone_last4) do update set nickname = excluded.nickname
+    on conflict do nothing
     returning *
   `
-  return rows[0] as Customer
+  if (rows.length) return { ok: true, customer: rows[0] as Customer }
+  return { ok: false, error: '같은 닉네임이 방금 등록되었습니다. 다른 닉네임을 써주세요.' }
+}
+
+/** 닉네임이 다른 사람에게 이미 쓰이고 있는지 (수정 시 본인은 제외) */
+export async function nicknameTaken(nickname: string, exceptId?: number): Promise<boolean> {
+  const rows = await sql`
+    select 1 from customers
+     where lower(nickname) = lower(${nickname})
+       and (${exceptId ?? null}::int is null or id <> ${exceptId ?? null}::int)
+     limit 1
+  `
+  return rows.length > 0
 }
 
 export async function getCustomer(id: number): Promise<Customer | null> {
@@ -90,16 +122,11 @@ export async function getCustomer(id: number): Promise<Customer | null> {
   return (rows[0] as Customer) ?? null
 }
 
-/**
- * 첫 화면 고객 명단.
- * 닉네임만 보여준다. 단 같은 닉네임이 둘 이상이면 서로 구분할 수 없으므로,
- * 그 경우에만 뒷 4자리를 함께 표시한다 (닉네임+뒷4자리 조합은 유일함이 보장됨).
- */
+/** 첫 화면 고객 명단. 닉네임이 유일하므로 닉네임만 내보낸다 (뒷자리는 노출하지 않음). */
 export async function listCustomerDirectory(): Promise<DirectoryEntry[]> {
   const rows = await sql`
     select c.id,
            c.nickname,
-           c.phone_last4,
            (c.pin_hash is not null) as has_pin,
            max(o.id) as last_order_id
       from customers c
@@ -107,16 +134,9 @@ export async function listCustomerDirectory(): Promise<DirectoryEntry[]> {
      group by c.id
      order by last_order_id desc nulls last, c.nickname
   `
-
-  const seen = new Map<string, number>()
-  for (const r of rows as any[]) {
-    seen.set(r.nickname, (seen.get(r.nickname) ?? 0) + 1)
-  }
-
   return (rows as any[]).map((r) => ({
     id: r.id,
     nickname: r.nickname,
-    hint: (seen.get(r.nickname) ?? 0) > 1 ? String(r.phone_last4) : '',
     has_pin: r.has_pin,
   }))
 }
