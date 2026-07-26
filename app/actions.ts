@@ -13,12 +13,12 @@ import {
 import { sql } from '@/lib/db'
 import { getCustomer, getOrder, getOrderCutoffTime } from '@/lib/queries'
 import { saveOrder } from '@/lib/orders'
-import { formatOrderMessage, notifyOwner } from '@/lib/telegram'
+import { formatOrderMessage, notifyOwner } from '@/lib/notify'
 import { nowTimeKST, todayKST } from '@/lib/util'
 import type { CartLine } from '@/lib/types'
 
 /**
- * 방금 저장된 주문을 사장님에게 텔레그램으로 알린다.
+ * 방금 저장된 주문을 사장님에게 알린다(설정된 채널 전부 — ntfy, 텔레그램).
  * revalidatePath/redirect 를 지연시키지 않도록 응답을 보낸 뒤(after) 실행하고,
  * 실패해도 주문 자체에는 영향을 주지 않는다.
  */
@@ -27,8 +27,8 @@ function notifyOrderSaved(orderId: number, customerId: number, title: string) {
     const [customer, order] = await Promise.all([getCustomer(customerId), getOrder(orderId)])
     if (!customer || !order) return
     await notifyOwner(
+      title,
       formatOrderMessage({
-        title,
         nickname: customer.nickname,
         lines: (order.items ?? []).map((i) => ({ name: i.product_name, qty: i.qty })),
         total: order.total_amount,
