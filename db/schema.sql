@@ -111,3 +111,9 @@ create table if not exists shop_settings (
   updated_at        timestamptz not null default now()
 );
 insert into shop_settings (id) values (1) on conflict (id) do nothing;
+
+-- 가게 이름·지점·연락처·오픈채팅 링크. 비어있으면(null) 코드 기본값/환경변수로 대신한다.
+alter table shop_settings add column if not exists shop_name text;
+alter table shop_settings add column if not exists shop_branch text;
+alter table shop_settings add column if not exists shop_phone text;
+alter table shop_settings add column if not exists shop_openchat_url text;

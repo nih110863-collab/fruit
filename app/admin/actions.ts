@@ -558,3 +558,23 @@ export async function updateOrderCutoff(formData: FormData) {
   `
   refresh()
 }
+
+/** 가게 이름·지점·연락처·오픈채팅 링크. 비워서 저장하면 그 항목은 화면에서 사라진다. */
+export async function updateShopInfo(formData: FormData) {
+  await requireAdmin()
+  const shopName = String(formData.get('shop_name') ?? '').trim()
+  const shopBranch = String(formData.get('shop_branch') ?? '').trim()
+  const shopPhone = String(formData.get('shop_phone') ?? '').trim()
+  const openChatUrl = String(formData.get('openchat_url') ?? '').trim()
+
+  await sql`
+    update shop_settings
+       set shop_name = ${shopName || null},
+           shop_branch = ${shopBranch || null},
+           shop_phone = ${shopPhone || null},
+           shop_openchat_url = ${openChatUrl || null},
+           updated_at = now()
+     where id = 1
+  `
+  refresh()
+}

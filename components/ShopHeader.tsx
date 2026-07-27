@@ -1,13 +1,20 @@
+import { getShopSettings } from '@/lib/queries'
+
 /**
- * 가게 이름 / 지점 / 연락처 / 오픈채팅 링크.
- * 지점·연락처·오픈채팅은 환경변수에 값이 있을 때만 나타난다.
+ * 가게 이름 / 지점 / 연락처 / 오픈채팅 링크. 관리자 "설정"에서 고친 값을 우선 쓰고,
+ * 아직 아무것도 안 넣었으면 환경변수/기본값으로 대신한다.
+ * 지점·연락처·오픈채팅은 값이 있을 때만 나타난다.
  * 좁은 화면에서도 이름이 잘리지 않도록 이름 줄과 아이콘 줄을 분리한다.
  */
-export default function ShopHeader({ subtitle, right }: { subtitle: string; right?: React.ReactNode }) {
-  const name = process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일'
-  const branch = process.env.NEXT_PUBLIC_SHOP_BRANCH
-  const phone = process.env.NEXT_PUBLIC_SHOP_PHONE
-  const openChat = process.env.NEXT_PUBLIC_OPENCHAT_URL
+export default async function ShopHeader({
+  subtitle,
+  right,
+}: {
+  subtitle: string
+  right?: React.ReactNode
+}) {
+  const { shopName: name, shopBranch: branch, shopPhone: phone, openChatUrl: openChat } =
+    await getShopSettings()
   const telHref = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : null
 
   return (

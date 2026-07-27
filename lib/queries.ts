@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { sql } from './db'
 import { toDateString } from './util'
 import type {
@@ -360,8 +361,35 @@ export async function listFakeFeedItems(): Promise<FakeFeedItem[]> {
 
 /* ---------- 가게 설정 ---------- */
 
+export type ShopSettings = {
+  shopName: string
+  shopBranch: string | null
+  shopPhone: string | null
+  openChatUrl: string | null
+  orderCutoffTime: string | null
+}
+
+/**
+ * 가게 이름·지점·연락처·오픈채팅 링크·주문 마감 시각을 한 번에 가져온다.
+ * 값이 비어있으면(DB 에 아직 아무것도 안 넣었으면) 환경변수/기본값으로 대신한다.
+ * react cache() 로 감싸서 같은 요청 안에서 여러 컴포넌트가 불러도 쿼리는 한 번만 나간다.
+ */
+export const getShopSettings = cache(async (): Promise<ShopSettings> => {
+  const rows = await sql`
+    select shop_name, shop_branch, shop_phone, shop_openchat_url, order_cutoff_time
+      from shop_settings where id = 1
+  `
+  const r = (rows[0] ?? {}) as Record<string, string | null>
+  return {
+    shopName: r.shop_name || process.env.NEXT_PUBLIC_SHOP_NAME || '새벽앤과일',
+    shopBranch: r.shop_branch || process.env.NEXT_PUBLIC_SHOP_BRANCH || null,
+    shopPhone: r.shop_phone || process.env.NEXT_PUBLIC_SHOP_PHONE || null,
+    openChatUrl: r.shop_openchat_url || process.env.NEXT_PUBLIC_OPENCHAT_URL || null,
+    orderCutoffTime: r.order_cutoff_time || null,
+  }
+})
+
 /** 주문 마감 시각('HH:MM'). null 이면 마감 없이 하루 종일 주문 가능. */
 export async function getOrderCutoffTime(): Promise<string | null> {
-  const rows = await sql`select order_cutoff_time from shop_settings where id = 1`
-  return rows[0]?.order_cutoff_time ?? null
+  return (await getShopSettings()).orderCutoffTime
 }
