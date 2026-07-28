@@ -396,14 +396,16 @@ export async function copyDailyItems(formData: FormData) {
   const to = String(formData.get('to_date') ?? todayKST()).slice(0, 10)
   if (!from || from === to) return
 
-  await sql`
+  const inserted = await sql`
     insert into daily_items (sale_date, product_id, price, limit_qty, sort_order, is_active)
     select ${to}::date, product_id, price, limit_qty, sort_order, true
       from daily_items
      where sale_date = ${from}::date
     on conflict (sale_date, product_id) do nothing
+    returning id
   `
   refresh()
+  redirect(`/admin/today?date=${to}&copied_from=${from}&copied_count=${inserted.length}`)
 }
 
 /* ================= 주문 ================= */

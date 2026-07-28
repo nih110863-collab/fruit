@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic'
 export default async function TodayPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>
+  searchParams: Promise<{ date?: string; copied_from?: string; copied_count?: string }>
 }) {
-  const { date } = await searchParams
+  const { date, copied_from, copied_count } = await searchParams
   const saleDate = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date! : todayKST()
 
   const [items, products, prevDate] = await Promise.all([
@@ -60,6 +60,13 @@ export default async function TodayPage({
           </Link>
         </div>
       </div>
+
+      {copied_from && (
+        <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700">
+          {formatDate(copied_from)} 목록에서 {copied_count ?? 0}개 품목을 가져왔습니다.
+          {copied_count === '0' && ' (이미 모두 오늘 목록에 있었습니다)'}
+        </p>
+      )}
 
       <form method="get" className="card flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[10rem]">
