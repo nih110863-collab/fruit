@@ -55,7 +55,22 @@ export default async function OrdersPage({
       )}
 
       <div className="card space-y-3">
-        <form method="get" className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <Link
+            href="/admin/orders"
+            className={unpaidOnly ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'}
+          >
+            오늘
+          </Link>
+          <Link
+            href="/admin/orders?unpaid=1"
+            className={unpaidOnly ? 'btn-primary btn-sm' : 'btn-ghost btn-sm'}
+          >
+            미입금만 모아보기
+          </Link>
+        </div>
+
+        <form method="get" className="flex flex-wrap items-end gap-2 border-t border-stone-100 pt-3">
           <div className="min-w-[10rem] flex-1">
             <label className="label" htmlFor="date">
               날짜
@@ -72,21 +87,6 @@ export default async function OrdersPage({
             조회
           </button>
         </form>
-
-        <div className="flex flex-wrap gap-1.5 border-t border-stone-100 pt-3">
-          <Link
-            href="/admin/orders"
-            className={unpaidOnly ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'}
-          >
-            오늘
-          </Link>
-          <Link
-            href="/admin/orders?unpaid=1"
-            className={unpaidOnly ? 'btn-primary btn-sm' : 'btn-ghost btn-sm'}
-          >
-            미입금만 모아보기
-          </Link>
-        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
