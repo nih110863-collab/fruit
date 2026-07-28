@@ -98,8 +98,8 @@ export default async function StatsPage({
         </div>
       </div>
 
-      <div className="card space-y-3">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="card">
+        <form method="get" className="flex flex-wrap items-center gap-1.5">
           {presets.map((p) => {
             const active = p.from === from && p.to === to
             return (
@@ -112,21 +112,20 @@ export default async function StatsPage({
               </Link>
             )
           })}
-        </div>
-
-        <form method="get" className="flex flex-wrap items-end gap-2 border-t border-stone-100 pt-3">
-          <div>
-            <label className="label text-xs" htmlFor="from">
-              시작
-            </label>
-            <input id="from" type="date" name="from" defaultValue={from} className="input py-2 text-sm" />
-          </div>
-          <div>
-            <label className="label text-xs" htmlFor="to">
-              끝
-            </label>
-            <input id="to" type="date" name="to" defaultValue={to} className="input py-2 text-sm" />
-          </div>
+          <input
+            type="date"
+            name="from"
+            aria-label="시작 날짜"
+            defaultValue={from}
+            className="input w-auto py-2 text-sm"
+          />
+          <input
+            type="date"
+            name="to"
+            aria-label="끝 날짜"
+            defaultValue={to}
+            className="input w-auto py-2 text-sm"
+          />
           <button type="submit" className="btn-ghost btn-sm">
             조회
           </button>

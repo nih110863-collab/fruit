@@ -38,12 +38,27 @@ export default async function TodayPage({
             품목은 매일 바뀌어도, 한 번 등록한 품목은 품목함에 계속 남습니다.
           </p>
         </div>
-        <Link
-          href="/admin/products"
-          className="btn btn-sm shrink-0 border-transparent bg-orange-500 text-white shadow-sm hover:bg-orange-600"
-        >
-          품목함 바로가기
-        </Link>
+        <div className="flex shrink-0 gap-1.5">
+          {prevDate && (
+            <form action={copyDailyItems}>
+              <input type="hidden" name="from_date" value={prevDate} />
+              <input type="hidden" name="to_date" value={saleDate} />
+              <button
+                type="submit"
+                className="btn-ghost btn-sm"
+                title={`직전 판매일 ${formatDate(prevDate)} 목록을 그대로 가져옵니다 (이미 있는 품목은 건너뜁니다)`}
+              >
+                전일 목록 가져오기
+              </button>
+            </form>
+          )}
+          <Link
+            href="/admin/products"
+            className="btn btn-sm border-transparent bg-orange-500 text-white shadow-sm hover:bg-orange-600"
+          >
+            품목함 바로가기
+          </Link>
+        </div>
       </div>
 
       <form method="get" className="card flex flex-wrap items-end gap-3">
@@ -59,21 +74,6 @@ export default async function TodayPage({
       </form>
 
       <p className="text-sm font-semibold text-brand-700">{formatDate(saleDate)} 판매목록</p>
-
-      {/* 지난 판매일 복사 */}
-      {prevDate && (
-        <form action={copyDailyItems} className="card flex flex-wrap items-center gap-3">
-          <input type="hidden" name="from_date" value={prevDate} />
-          <input type="hidden" name="to_date" value={saleDate} />
-          <p className="flex-1 text-sm text-stone-600">
-            직전 판매일 <b>{formatDate(prevDate)}</b> 목록을 그대로 가져올까요?
-            <span className="ml-1 text-stone-400">(이미 있는 품목은 건너뜁니다)</span>
-          </p>
-          <button type="submit" className="btn-ghost btn-sm">
-            그대로 복사
-          </button>
-        </form>
-      )}
 
       {/* 품목함에서 꺼내오기 */}
       <details className="card" open={items.length === 0}>
@@ -115,29 +115,33 @@ export default async function TodayPage({
         <summary className="cursor-pointer text-sm font-bold text-stone-700">
           새 품목 등록해서 바로 올리기
         </summary>
-        <form action={quickAddItem} className="mt-3 grid gap-3 sm:grid-cols-2">
+        <form action={quickAddItem} className="mt-3 space-y-3">
           <input type="hidden" name="sale_date" value={saleDate} />
-          <div className="sm:col-span-2">
-            <label className="label">품목명</label>
-            <input name="name" className="input" placeholder="예) 햇감자" required maxLength={40} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label">분류</label>
+              <CategorySelect categories={categories} />
+            </div>
+            <div>
+              <label className="label">품목명</label>
+              <input name="name" className="input" placeholder="예) 햇감자" required maxLength={40} />
+            </div>
           </div>
-          <div>
-            <label className="label">분류</label>
-            <CategorySelect categories={categories} />
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[7rem] flex-1">
+              <label className="label">가격 (원)</label>
+              <MoneyInput name="price" className="input" placeholder="5000" required />
+            </div>
+            <div className="min-w-[7rem] flex-1">
+              <label className="label">
+                수량 제한 <span className="font-normal text-stone-400">비우면 무제한</span>
+              </label>
+              <input name="limit_qty" className="input" inputMode="numeric" placeholder="예) 10" />
+            </div>
+            <button type="submit" className="btn-primary shrink-0">
+              등록하기
+            </button>
           </div>
-          <div>
-            <label className="label">가격 (원)</label>
-            <MoneyInput name="price" className="input" placeholder="5000" required />
-          </div>
-          <div>
-            <label className="label">
-              수량 제한 <span className="font-normal text-stone-400">비우면 무제한</span>
-            </label>
-            <input name="limit_qty" className="input" inputMode="numeric" placeholder="예) 10" />
-          </div>
-          <button type="submit" className="btn-primary sm:col-span-2">
-            등록하고 목록에 올리기
-          </button>
         </form>
       </details>
 

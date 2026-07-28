@@ -285,19 +285,21 @@ function timeOfDay(v: FormDataEntryValue | null): string {
   return /^\d{2}:\d{2}$/.test(s) ? s : ''
 }
 
-/** 가격·수량제한·순서만 다룬다. 세일/노출은 아래 상단 일괄설정 전용이다 (개별 폼에서 건드리지 않음). */
-export async function updateDailyItem(formData: FormData) {
+/** 판매목록 화면 상단의 '저장' 버튼 — 목록에 보이는 모든 품목의 정가·수량제한을 한 번에 저장한다. */
+export async function bulkUpdateDailyItems(formData: FormData) {
   await requireAdmin()
-  const id = num(formData.get('id'))
-  if (!id) return
+  const ids = formData.getAll('ids').map((v) => num(v)).filter(Boolean)
 
-  await sql`
-    update daily_items
-       set price = ${num(formData.get('price'))},
-           limit_qty = ${optionalNum(formData.get('limit_qty'))},
-           sort_order = ${num(formData.get('sort_order'))}
-     where id = ${id}
-  `
+  await Promise.all(
+    ids.map((id) =>
+      sql`
+        update daily_items
+           set price = ${num(formData.get(`price_${id}`))},
+               limit_qty = ${optionalNum(formData.get(`limit_qty_${id}`))}
+         where id = ${id}
+      `,
+    ),
+  )
   refresh()
 }
 
@@ -350,38 +352,32 @@ export async function bulkClearSale(formData: FormData) {
   refresh()
 }
 
-export async function toggleDailyItem(formData: FormData) {
-  await requireAdmin()
-  const id = num(formData.get('id'))
-  if (!id) return
-  await sql`update daily_items set is_active = not is_active where id = ${id}`
-  refresh()
-}
-
 /**
  * '마감' 은 실제 재고 부족이 아니라 오늘 확정된 주문이 수량 제한(limit_qty)에 도달했다는 뜻이다.
  * 그래서 관리자가 끄고 켜는 스위치가 아니라, 제한을 풀어야 없어진다.
  * 이 액션은 그 제한을 통째로 없애 '무제한'으로 바꾼다 — 마감 배지 옆의 '무제한으로 풀기' 버튼용.
  */
-export async function clearDailyItemLimit(formData: FormData) {
+export async function clearDailyItemLimit(id: number) {
   await requireAdmin()
-  const id = num(formData.get('id'))
   if (!id) return
   await sql`update daily_items set limit_qty = null where id = ${id}`
   refresh()
 }
 
-export async function removeDailyItem(formData: FormData) {
+/** 상단 '품목함으로!' 버튼 — 체크한 품목들을 오늘 목록에서 한 번에 내린다. */
+export async function bulkRemoveDailyItems(ids: number[]) {
   await requireAdmin()
-  const id = num(formData.get('id'))
-  if (!id) return
-  const used = await sql`select 1 from order_items where daily_item_id = ${id} limit 1`
-  if (used.length) {
-    // 이미 주문이 들어온 품목은 내리기만 한다
-    await sql`update daily_items set is_active = false where id = ${id}`
-  } else {
-    await sql`delete from daily_items where id = ${id}`
-  }
+  await Promise.all(
+    ids.map(async (id) => {
+      const used = await sql`select 1 from order_items where daily_item_id = ${id} limit 1`
+      if (used.length) {
+        // 이미 주문이 들어온 품목은 내리기만 한다
+        await sql`update daily_items set is_active = false where id = ${id}`
+      } else {
+        await sql`delete from daily_items where id = ${id}`
+      }
+    }),
+  )
   refresh()
 }
 

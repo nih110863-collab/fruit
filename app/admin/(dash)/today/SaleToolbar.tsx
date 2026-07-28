@@ -9,6 +9,7 @@ import { HIGHLIGHTS } from '@/lib/types'
 const SelectionContext = createContext<{
   selected: Set<number>
   toggle: (id: number) => void
+  clear: () => void
 } | null>(null)
 
 export function useSelection() {
@@ -65,7 +66,7 @@ export function SaleSelectionProvider({
   )
 
   return (
-    <SelectionContext.Provider value={{ selected, toggle }}>
+    <SelectionContext.Provider value={{ selected, toggle, clear }}>
       <details className="card space-y-3 border-brand-200 bg-brand-50/40">
         <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
