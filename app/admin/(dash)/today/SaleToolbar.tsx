@@ -27,10 +27,21 @@ function ApplyButton({ disabled }: { disabled: boolean }) {
   )
 }
 
-function ClearButton({ disabled }: { disabled: boolean }) {
+function ClearButton({
+  disabled,
+  formAction,
+}: {
+  disabled: boolean
+  formAction: (formData: FormData) => void
+}) {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" className="btn-ghost btn-sm shrink-0" disabled={disabled || pending}>
+    <button
+      type="submit"
+      formAction={formAction}
+      className="btn-ghost btn-sm shrink-0"
+      disabled={disabled || pending}
+    >
       세일 해제
     </button>
   )
@@ -68,16 +79,15 @@ export function SaleSelectionProvider({
   return (
     <SelectionContext.Provider value={{ selected, toggle, clear }}>
       <details className="card space-y-3 border-brand-200 bg-brand-50/40">
-        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-stone-700">세일 · 노출 구역 일괄 설정</p>
-            <p className="mt-0.5 truncate text-xs text-stone-500">
-              {selected.size === 0
-                ? '아래 목록에서 품목을 체크하면 여기서 한 번에 세일을 걸 수 있습니다.'
-                : `${selected.size}개 선택됨 · ${names.join(', ')}`}
-            </p>
-          </div>
+        <summary className="cursor-pointer text-sm font-bold text-stone-700">
+          세일 · 노출 구역 일괄 설정{selected.size > 0 && ` (${selected.size}개 선택됨)`}
         </summary>
+
+        <p className="text-xs text-stone-500">
+          {selected.size === 0
+            ? '아래 목록에서 품목을 체크하면 여기서 한 번에 세일을 걸 수 있습니다.'
+            : names.join(', ')}
+        </p>
 
         <div className="flex justify-end gap-1.5">
           <button type="button" onClick={selectAll} className="btn-ghost btn-sm">
@@ -132,13 +142,7 @@ export function SaleSelectionProvider({
           </label>
 
           <ApplyButton disabled={selected.size === 0} />
-        </form>
-
-        <form action={bulkClearSale} onSubmit={() => setTimeout(clear, 0)}>
-          {ids.map((id) => (
-            <input key={id} type="hidden" name="daily_item_ids" value={id} />
-          ))}
-          <ClearButton disabled={selected.size === 0} />
+          <ClearButton disabled={selected.size === 0} formAction={bulkClearSale} />
         </form>
 
         <p className="text-[11px] text-stone-400">

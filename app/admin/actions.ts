@@ -364,20 +364,21 @@ export async function clearDailyItemLimit(id: number) {
   refresh()
 }
 
+/** 상단 '숨김' 버튼 — 체크한 품목들의 고객 화면 노출 여부를 한 번에 뒤집는다. */
+export async function bulkToggleDailyItems(ids: number[]) {
+  await requireAdmin()
+  await Promise.all(
+    ids.map((id) => sql`update daily_items set is_active = not is_active where id = ${id}`),
+  )
+  refresh()
+}
+
 /** 상단 '품목함으로!' 버튼 — 체크한 품목들을 오늘 목록에서 한 번에 내린다. */
 export async function bulkRemoveDailyItems(ids: number[]) {
   await requireAdmin()
-  await Promise.all(
-    ids.map(async (id) => {
-      const used = await sql`select 1 from order_items where daily_item_id = ${id} limit 1`
-      if (used.length) {
-        // 이미 주문이 들어온 품목은 내리기만 한다
-        await sql`update daily_items set is_active = false where id = ${id}`
-      } else {
-        await sql`delete from daily_items where id = ${id}`
-      }
-    }),
-  )
+  // 주문 상세(order_items)는 품목명·단가를 주문 시점 값으로 따로 저장해두므로,
+  // 이미 주문이 들어온 품목이라도 오늘 목록에서 지우는 건 주문 기록에 영향이 없다.
+  await Promise.all(ids.map((id) => sql`delete from daily_items where id = ${id}`))
   refresh()
 }
 

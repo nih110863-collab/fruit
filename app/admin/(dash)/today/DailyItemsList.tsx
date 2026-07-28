@@ -3,7 +3,13 @@
 import { startTransition, useEffect, useRef, useState } from 'react'
 import MoneyInput from '@/components/MoneyInput'
 import ProductImage from '@/components/ProductImage'
-import { bulkRemoveDailyItems, bulkUpdateDailyItems, clearDailyItemLimit, reorderDailyItems } from '../../actions'
+import {
+  bulkRemoveDailyItems,
+  bulkToggleDailyItems,
+  bulkUpdateDailyItems,
+  clearDailyItemLimit,
+  reorderDailyItems,
+} from '../../actions'
 import { ItemCheckbox, useSelection } from './SaleToolbar'
 import { HIGHLIGHTS } from '@/lib/types'
 import type { DailyItem } from '@/lib/types'
@@ -42,8 +48,9 @@ function DragHandle({
 
 /**
  * 판매목록 카드 그리드. 드래그 핸들을 누른 채 위아래로 옮기면 순서가 바로 바뀐다.
- * 상단 '저장'은 화면에 보이는 모든 카드의 정가·제한수량을 한 번에 저장하고,
- * '품목함으로!'는 체크한 카드만 골라 오늘 목록에서 내린다.
+ * 상단 버튼은 모두 체크한 카드를 대상으로 한다 — '숨김'은 노출 여부를 뒤집고,
+ * '품목함 이동'은 오늘 목록에서 내려 품목함으로 돌려보낸다. '저장'만 예외로,
+ * 화면에 보이는 모든 카드의 정가·제한수량을 체크 여부와 무관하게 한 번에 저장한다.
  */
 export default function DailyItemsList({ items }: { items: DailyItem[] }) {
   const [order, setOrder] = useState(items)
@@ -89,6 +96,15 @@ export default function DailyItemsList({ items }: { items: DailyItem[] }) {
     })
   }
 
+  function handleBulkToggle() {
+    if (selected.size === 0) return
+    const ids = Array.from(selected)
+    startTransition(() => {
+      bulkToggleDailyItems(ids)
+    })
+    clear()
+  }
+
   function handleBulkRemove() {
     if (selected.size === 0) return
     const ids = Array.from(selected)
@@ -99,7 +115,7 @@ export default function DailyItemsList({ items }: { items: DailyItem[] }) {
   }
 
   return (
-    <form action={bulkUpdateDailyItems}>
+    <form action={bulkUpdateDailyItems} className="mt-4">
       {order.map((it) => (
         <input key={it.id} type="hidden" name="ids" value={it.id} />
       ))}
@@ -107,11 +123,19 @@ export default function DailyItemsList({ items }: { items: DailyItem[] }) {
       <div className="mb-2 flex justify-end gap-1.5">
         <button
           type="button"
+          onClick={handleBulkToggle}
+          disabled={selected.size === 0}
+          className="btn-ghost btn-sm disabled:opacity-40"
+        >
+          숨김
+        </button>
+        <button
+          type="button"
           onClick={handleBulkRemove}
           disabled={selected.size === 0}
           className="btn-ghost btn-sm text-red-600 disabled:opacity-40"
         >
-          품목함으로!
+          품목함 이동
         </button>
         <button type="submit" className="btn-primary btn-sm">
           저장
