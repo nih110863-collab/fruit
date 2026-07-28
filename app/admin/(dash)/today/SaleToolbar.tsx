@@ -78,9 +78,35 @@ export function SaleSelectionProvider({
 
   return (
     <SelectionContext.Provider value={{ selected, toggle, clear }}>
-      <details className="card space-y-3 border-brand-200 bg-brand-50/40">
-        <summary className="cursor-pointer text-sm font-bold text-stone-700">
-          세일 · 노출 구역 일괄 설정{selected.size > 0 && ` (${selected.size}개 선택됨)`}
+      <details className="group card space-y-3 border-brand-200 bg-brand-50/40">
+        <summary className="flex list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+          <span className="cursor-pointer text-sm font-bold text-stone-700">
+            <span className="inline-block transition-transform group-open:rotate-90">▶</span>{' '}
+            세일 · 노출 구역 일괄 설정{selected.size > 0 && ` (${selected.size}개 선택됨)`}
+          </span>
+          <div className="flex shrink-0 gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                selectAll()
+              }}
+              className="btn-ghost btn-sm"
+            >
+              전체 선택
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                clear()
+              }}
+              disabled={selected.size === 0}
+              className="btn-ghost btn-sm disabled:opacity-40"
+            >
+              선택 해제
+            </button>
+          </div>
         </summary>
 
         <p className="text-xs text-stone-500">
@@ -88,20 +114,6 @@ export function SaleSelectionProvider({
             ? '아래 목록에서 품목을 체크하면 여기서 한 번에 세일을 걸 수 있습니다.'
             : names.join(', ')}
         </p>
-
-        <div className="flex justify-end gap-1.5">
-          <button type="button" onClick={selectAll} className="btn-ghost btn-sm">
-            전체 선택
-          </button>
-          <button
-            type="button"
-            onClick={clear}
-            disabled={selected.size === 0}
-            className="btn-ghost btn-sm disabled:opacity-40"
-          >
-            선택 해제
-          </button>
-        </div>
 
         <form
           action={bulkSetSale}

@@ -126,22 +126,20 @@ export default async function TodayPage({
               <label className="label">품목명</label>
               <input name="name" className="input" placeholder="예) 햇감자" required maxLength={40} />
             </div>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[7rem] flex-1">
+            <div>
               <label className="label">가격 (원)</label>
               <MoneyInput name="price" className="input" placeholder="5000" required />
             </div>
-            <div className="min-w-[7rem] flex-1">
+            <div>
               <label className="label">
                 수량 제한 <span className="font-normal text-stone-400">비우면 무제한</span>
               </label>
               <input name="limit_qty" className="input" inputMode="numeric" placeholder="예) 10" />
             </div>
-            <button type="submit" className="btn-primary shrink-0">
-              등록하기
-            </button>
           </div>
+          <button type="submit" className="btn-primary w-full py-4 text-base">
+            등록하기
+          </button>
         </form>
       </details>
 
