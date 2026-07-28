@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { bulkClearSale, bulkSetSale } from '../../actions'
+import MoneyInput from '@/components/MoneyInput'
 import { HIGHLIGHTS } from '@/lib/types'
 
 const SelectionContext = createContext<{
@@ -65,8 +66,8 @@ export function SaleSelectionProvider({
 
   return (
     <SelectionContext.Provider value={{ selected, toggle }}>
-      <div className="card space-y-3 border-brand-200 bg-brand-50/40">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <details className="card space-y-3 border-brand-200 bg-brand-50/40">
+        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-bold text-stone-700">세일 · 노출 구역 일괄 설정</p>
             <p className="mt-0.5 truncate text-xs text-stone-500">
@@ -75,19 +76,20 @@ export function SaleSelectionProvider({
                 : `${selected.size}개 선택됨 · ${names.join(', ')}`}
             </p>
           </div>
-          <div className="flex shrink-0 gap-1.5">
-            <button type="button" onClick={selectAll} className="btn-ghost btn-sm">
-              전체 선택
-            </button>
-            <button
-              type="button"
-              onClick={clear}
-              disabled={selected.size === 0}
-              className="btn-ghost btn-sm disabled:opacity-40"
-            >
-              선택 해제
-            </button>
-          </div>
+        </summary>
+
+        <div className="flex justify-end gap-1.5">
+          <button type="button" onClick={selectAll} className="btn-ghost btn-sm">
+            전체 선택
+          </button>
+          <button
+            type="button"
+            onClick={clear}
+            disabled={selected.size === 0}
+            className="btn-ghost btn-sm disabled:opacity-40"
+          >
+            선택 해제
+          </button>
         </div>
 
         <form
@@ -101,12 +103,7 @@ export function SaleSelectionProvider({
 
           <label className="w-24">
             <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">세일가</span>
-            <input
-              name="sale_price"
-              className="input px-2 py-1.5 text-sm"
-              inputMode="numeric"
-              placeholder="예: 3500"
-            />
+            <MoneyInput name="sale_price" className="input px-2 py-1.5 text-sm" placeholder="예: 3500" />
           </label>
           <label className="w-24">
             <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">시작</span>
@@ -147,7 +144,7 @@ export function SaleSelectionProvider({
           시작 시간을 비우면 하루 종일 세일가로 팝니다. 시작 시간만 정하고 몇 시간을 비우면
           시작 후 계속 진행됩니다(끝 시간 없음). 세일가를 비우고 적용하면 정가로 돌아갑니다.
         </p>
-      </div>
+      </details>
 
       {children}
     </SelectionContext.Provider>

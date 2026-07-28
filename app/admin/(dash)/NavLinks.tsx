@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/admin/orders', label: '주문' },
   { href: '/admin/stats', label: '통계' },
   { href: '/admin/customers', label: '고객' },
+  { href: '/admin/settings', label: '가게관리' },
 ]
 
 export default function NavLinks() {

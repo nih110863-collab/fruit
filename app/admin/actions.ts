@@ -8,6 +8,7 @@ import {
   requireAdmin,
   startAdminSession,
 } from '@/lib/auth'
+import { parseCsv } from '@/lib/csv'
 import { sql } from '@/lib/db'
 import { downloadImage } from '@/lib/imageSearch'
 import { saveOrder } from '@/lib/orders'
@@ -15,7 +16,7 @@ import { nicknameTaken, resolveCustomer } from '@/lib/queries'
 import { normalizeLast4, normalizeNickname, todayKST } from '@/lib/util'
 import type { CartLine } from '@/lib/types'
 
-export type FormState = { error?: string }
+export type FormState = { error?: string; message?: string }
 
 function refresh() {
   revalidatePath('/admin', 'layout')
@@ -89,6 +90,47 @@ export async function updateProduct(formData: FormData) {
      where id = ${id}
   `
   refresh()
+}
+
+/** 엑셀(CSV)로 내려받은 품목함 파일을 다시 올리면 품목명 기준으로 일괄 추가·수정한다. */
+export async function importProducts(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin()
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: '파일을 선택해주세요.' }
+  }
+
+  const rows = parseCsv(await file.text())
+  const dataRows = rows[0]?.[0]?.trim() === '품목명' ? rows.slice(1) : rows
+  if (!dataRows.length) {
+    return { error: '읽을 수 있는 품목이 없습니다.' }
+  }
+
+  let added = 0
+  let updatedCount = 0
+  for (const row of dataRows) {
+    const name = (row[0] ?? '').trim()
+    if (!name) continue
+    const price = num(row[1])
+    const category = (row[2] ?? '').trim() || null
+    const archived = (row[3] ?? '').trim() === '보관됨'
+
+    const existing = await sql`select 1 from products where name = ${name}`
+    if (existing.length) updatedCount++
+    else added++
+
+    await sql`
+      insert into products (name, unit, default_price, category, is_archived)
+      values (${name}, '개', ${price}, ${category}, ${archived})
+      on conflict (name) do update
+        set default_price = excluded.default_price,
+            category = excluded.category,
+            is_archived = excluded.is_archived
+    `
+  }
+
+  refresh()
+  return { message: `${added}개 추가, ${updatedCount}개 수정됐습니다.` }
 }
 
 /** 안 쓰는 품목 숨기기 / 다시 꺼내기 */
@@ -340,6 +382,13 @@ export async function removeDailyItem(formData: FormData) {
   } else {
     await sql`delete from daily_items where id = ${id}`
   }
+  refresh()
+}
+
+/** 판매목록 화면에서 드래그로 바꾼 순서를 그대로 저장한다 */
+export async function reorderDailyItems(ids: number[]) {
+  await requireAdmin()
+  await Promise.all(ids.map((id, index) => sql`update daily_items set sort_order = ${index} where id = ${id}`))
   refresh()
 }
 

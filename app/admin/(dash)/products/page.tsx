@@ -1,5 +1,7 @@
 import CategorySelect from '@/components/CategorySelect'
+import MoneyInput from '@/components/MoneyInput'
 import ImageUploader from '../ImageUploader'
+import ImportProductsForm from './ImportProductsForm'
 import {
   createProduct,
   deleteProduct,
@@ -29,6 +31,20 @@ export default async function ProductsPage() {
         </p>
       </div>
 
+      <div className="card space-y-2">
+        <p className="label">엑셀로 일괄 관리</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <a href="/api/admin/products-export" className="btn-ghost btn-sm shrink-0">
+            엑셀 다운로드
+          </a>
+          <ImportProductsForm />
+        </div>
+        <p className="text-xs text-stone-400">
+          다운로드한 파일을 열어 수정한 뒤(품목명이 같으면 수정, 없으면 새로 추가) 그대로 다시
+          업로드하면 한 번에 반영됩니다. 다른 프로그램으로 저장할 때도 CSV 형식은 그대로 두세요.
+        </p>
+      </div>
+
       <form action={createProduct} className="card grid gap-3 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <label className="label">품목명</label>
@@ -36,7 +52,7 @@ export default async function ProductsPage() {
         </div>
         <div>
           <label className="label">기본가격</label>
-          <input name="default_price" className="input" inputMode="numeric" placeholder="0" />
+          <MoneyInput name="default_price" className="input" placeholder="0" />
         </div>
         <div className="sm:col-span-2">
           <label className="label">분류</label>
@@ -73,10 +89,9 @@ export default async function ProductsPage() {
                   </div>
                   <div className="w-28">
                     <label className="label text-xs">기본가격</label>
-                    <input
+                    <MoneyInput
                       name="default_price"
                       className="input py-2 text-sm"
-                      inputMode="numeric"
                       defaultValue={p.default_price}
                     />
                   </div>
