@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import OrderList from './OrderList'
 import { dailySummary, listDailyItems, listOrdersWithItems, pickList } from '@/lib/queries'
+import { HIGHLIGHTS } from '@/lib/types'
 import { formatDate, todayKST, won } from '@/lib/util'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,8 @@ export default async function AdminHome() {
   ])
 
   const lowStock = items.filter((i) => i.remaining !== null && i.remaining <= 3)
+  const onSale = items.filter((i) => i.sale_active)
+  const limited = items.filter((i) => i.limit_qty !== null)
 
   return (
     <div className="space-y-6">
@@ -54,6 +57,37 @@ export default async function AdminHome() {
         <Stat label="미입금" value={won(summary.unpaid)} tone="warn" />
         <Stat label="배달 건수" value={`${summary.delivery_count}건`} />
       </div>
+
+      {(onSale.length > 0 || limited.length > 0) && (
+        <div className="space-y-3 rounded-2xl border border-brand-200 bg-brand-50 p-4">
+          <p className="text-sm font-bold text-brand-900">오늘의 특이사항</p>
+          {onSale.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-semibold text-stone-500">할인 중</p>
+              <ul className="flex flex-wrap gap-2">
+                {onSale.map((i) => (
+                  <li key={i.id} className="badge bg-red-100 text-red-700">
+                    {i.name} {won(i.sale_price!)}
+                    {i.highlight && ` · ${HIGHLIGHTS.find((h) => h.key === i.highlight)?.label}`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {limited.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-semibold text-stone-500">수량 한정</p>
+              <ul className="flex flex-wrap gap-2">
+                {limited.map((i) => (
+                  <li key={i.id} className="badge bg-amber-100 text-amber-800">
+                    {i.name} {i.remaining === 0 ? '마감' : `${i.remaining}/${i.limit_qty}개`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {lowStock.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
