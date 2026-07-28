@@ -40,12 +40,32 @@ export default async function OrdersPage({
                 : formatDate(saleDate ?? todayKST())}
           </p>
         </div>
-        <Link
-          href={`/admin/orders/new${saleDate ? `?date=${saleDate}` : ''}`}
-          className="btn-primary btn-sm"
-        >
-          + 주문 대신 넣기
-        </Link>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Link
+            href={`/admin/orders/new${saleDate ? `?date=${saleDate}` : ''}`}
+            className="btn-primary btn-sm"
+          >
+            + 주문 대신 넣기
+          </Link>
+          <Link
+            href={unpaidOnly ? '/admin/orders' : '/admin/orders?unpaid=1'}
+            className={unpaidOnly ? 'btn-primary btn-sm' : 'btn-ghost btn-sm'}
+          >
+            미입금 보기
+          </Link>
+          <form method="get" className="flex items-center gap-1.5">
+            <input
+              type="date"
+              name="date"
+              aria-label="날짜"
+              defaultValue={saleDate ?? ''}
+              className="input w-auto py-2 text-sm"
+            />
+            <button type="submit" className="btn-ghost btn-sm">
+              조회
+            </button>
+          </form>
+        </div>
       </div>
 
       {saved && (
@@ -53,41 +73,6 @@ export default async function OrdersPage({
           주문 #{saved} 이(가) 저장되었습니다.
         </p>
       )}
-
-      <div className="card space-y-3">
-        <div className="flex flex-wrap gap-1.5">
-          <Link
-            href="/admin/orders"
-            className={unpaidOnly ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'}
-          >
-            오늘
-          </Link>
-          <Link
-            href="/admin/orders?unpaid=1"
-            className={unpaidOnly ? 'btn-primary btn-sm' : 'btn-ghost btn-sm'}
-          >
-            미입금만 모아보기
-          </Link>
-        </div>
-
-        <form method="get" className="flex flex-wrap items-end gap-2 border-t border-stone-100 pt-3">
-          <div className="min-w-[10rem] flex-1">
-            <label className="label" htmlFor="date">
-              날짜
-            </label>
-            <input
-              id="date"
-              type="date"
-              name="date"
-              defaultValue={saleDate ?? ''}
-              className="input py-2 text-sm"
-            />
-          </div>
-          <button type="submit" className="btn-ghost btn-sm">
-            조회
-          </button>
-        </form>
-      </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl border border-stone-200 bg-white p-3">
