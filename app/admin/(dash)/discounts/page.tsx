@@ -6,13 +6,8 @@ import { formatDate, todayKST, won } from '@/lib/util'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DiscountsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string }>
-}) {
-  const { date } = await searchParams
-  const saleDate = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date! : todayKST()
+export default async function DiscountsPage() {
+  const saleDate = todayKST()
 
   const items = await listDailyItems(saleDate)
 
@@ -24,18 +19,6 @@ export default async function DiscountsPage({
           {formatDate(saleDate)} 판매목록의 세일가·노출 구역을 관리합니다.
         </p>
       </div>
-
-      <form method="get" className="card flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[10rem]">
-          <label className="label" htmlFor="date">
-            판매 날짜
-          </label>
-          <input id="date" type="date" name="date" defaultValue={saleDate} className="input" />
-        </div>
-        <button type="submit" className="btn-ghost">
-          이동
-        </button>
-      </form>
 
       {items.length === 0 ? (
         <div className="card text-center text-sm text-stone-500">
