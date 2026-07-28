@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import CategorySelect from '@/components/CategorySelect'
 import MoneyInput from '@/components/MoneyInput'
-import { addProductsToDate, copyDailyItems, quickAddItem } from '../../actions'
+import { copyDailyItems, quickAddItem } from '../../actions'
 import DailyItemsList from './DailyItemsList'
-import { SaleSelectionProvider } from './SaleToolbar'
+import PickFromInventoryButton from './PickFromInventoryButton'
+import { SelectionProvider } from './SaleToolbar'
 import { listDailyItems, listProducts, previousSaleDate } from '@/lib/queries'
-import { formatDate, todayKST, won } from '@/lib/util'
+import { formatDate, todayKST } from '@/lib/util'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,6 +53,7 @@ export default async function TodayPage({
               </button>
             </form>
           )}
+          <PickFromInventoryButton available={available} saleDate={saleDate} />
           <Link
             href="/admin/products"
             className="btn btn-sm border-transparent bg-orange-500 text-white shadow-sm hover:bg-orange-600"
@@ -81,41 +83,6 @@ export default async function TodayPage({
       </form>
 
       <p className="text-sm font-semibold text-brand-700">{formatDate(saleDate)} 판매목록</p>
-
-      {/* 품목함에서 꺼내오기 */}
-      <details className="card" open={items.length === 0}>
-        <summary className="cursor-pointer text-sm font-bold text-stone-700">
-          품목함에서 꺼내오기 ({available.length}개)
-        </summary>
-        {available.length === 0 ? (
-          <p className="mt-3 text-sm text-stone-500">
-            품목함에 있는 품목이 모두 오늘 목록에 들어가 있습니다.
-          </p>
-        ) : (
-          <form action={addProductsToDate} className="mt-3 space-y-3">
-            <input type="hidden" name="sale_date" value={saleDate} />
-            <ul className="grid gap-1.5 sm:grid-cols-2">
-              {available.map((p) => (
-                <li key={p.id}>
-                  <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-stone-200 px-3 py-2.5 text-sm hover:bg-stone-50">
-                    <input
-                      type="checkbox"
-                      name="product_ids"
-                      value={p.id}
-                      className="size-4 accent-emerald-700"
-                    />
-                    <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
-                    <span className="shrink-0 text-xs text-stone-500">{won(p.default_price)}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            <button type="submit" className="btn-primary w-full">
-              선택한 품목 목록에 올리기
-            </button>
-          </form>
-        )}
-      </details>
 
       {/* 새 품목 즉석 등록 */}
       <details className="card">
@@ -161,9 +128,9 @@ export default async function TodayPage({
             <p className="py-6">아직 올린 품목이 없습니다. 위에서 꺼내오거나 새로 등록해주세요.</p>
           </div>
         ) : (
-          <SaleSelectionProvider items={items.map((it) => ({ id: it.id, name: it.name }))}>
+          <SelectionProvider>
             <DailyItemsList items={items} />
-          </SaleSelectionProvider>
+          </SelectionProvider>
         )}
       </section>
     </div>

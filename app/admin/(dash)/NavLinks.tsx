@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 const LINKS = [
   { href: '/admin', label: '오늘' },
   { href: '/admin/today', label: '판매목록' },
+  { href: '/admin/discounts', label: '할인설정' },
   { href: '/admin/orders', label: '주문' },
   { href: '/admin/stats', label: '통계' },
   { href: '/admin/customers', label: '고객' },
