@@ -76,19 +76,25 @@ export async function createProduct(formData: FormData) {
   refresh()
 }
 
-export async function updateProduct(formData: FormData) {
+/** 품목함 상단 '저장' — 화면에 보이는 모든 품목의 이름·가격·분류를 한 번에 저장한다. */
+export async function bulkUpdateProducts(
+  entries: { id: number; name: string; price: string; category: string }[],
+) {
   await requireAdmin()
-  const id = num(formData.get('id'))
-  const name = String(formData.get('name') ?? '').trim()
-  if (!id || !name) return
-
-  await sql`
-    update products
-       set name = ${name},
-           default_price = ${num(formData.get('default_price'))},
-           category = ${String(formData.get('category') ?? '').trim() || null}
-     where id = ${id}
-  `
+  await Promise.all(
+    entries
+      .filter((e) => e.name.trim())
+      .map((e) => {
+        const price = Number(e.price.replace(/[^\d]/g, '')) || 0
+        return sql`
+          update products
+             set name = ${e.name.trim()},
+                 default_price = ${price},
+                 category = ${e.category.trim() || null}
+           where id = ${e.id}
+        `
+      }),
+  )
   refresh()
 }
 
@@ -142,17 +148,27 @@ export async function toggleArchiveProduct(formData: FormData) {
   refresh()
 }
 
-export async function deleteProduct(formData: FormData) {
+/** 품목함 상단 '보관함으로' — 체크한 품목들을 한 번에 보관함으로 옮긴다. */
+export async function bulkArchiveProducts(ids: number[]) {
   await requireAdmin()
-  const id = num(formData.get('id'))
-  if (!id) return
-  // 주문 이력에 남은 품목은 지우지 않고 숨김 처리한다 (기록 보존)
-  const used = await sql`select 1 from order_items where product_id = ${id} limit 1`
-  if (used.length) {
-    await sql`update products set is_archived = true where id = ${id}`
-  } else {
-    await sql`delete from products where id = ${id}`
-  }
+  await Promise.all(ids.map((id) => sql`update products set is_archived = true where id = ${id}`))
+  refresh()
+}
+
+/** 품목함 상단 '삭제' — 체크한 품목들을 한 번에 지운다. 주문 이력이 있으면 보관 처리만 한다. */
+export async function bulkDeleteProducts(ids: number[]) {
+  await requireAdmin()
+  await Promise.all(
+    ids.map(async (id) => {
+      // 주문 이력에 남은 품목은 지우지 않고 보관 처리한다 (기록 보존)
+      const used = await sql`select 1 from order_items where product_id = ${id} limit 1`
+      if (used.length) {
+        await sql`update products set is_archived = true where id = ${id}`
+      } else {
+        await sql`delete from products where id = ${id}`
+      }
+    }),
+  )
   refresh()
 }
 

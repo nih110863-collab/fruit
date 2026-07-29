@@ -1,14 +1,8 @@
 import CategorySelect from '@/components/CategorySelect'
 import MoneyInput from '@/components/MoneyInput'
-import ImageUploader from '../ImageUploader'
+import ActiveProductsList from './ActiveProductsList'
 import ImportProductsForm from './ImportProductsForm'
-import {
-  createProduct,
-  deleteProduct,
-  deleteProductImage,
-  toggleArchiveProduct,
-  updateProduct,
-} from '../../actions'
+import { createProduct, toggleArchiveProduct } from '../../actions'
 import { listProducts } from '@/lib/queries'
 import { won } from '@/lib/util'
 
@@ -24,25 +18,19 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">품목함</h1>
-        <p className="text-sm text-stone-500">
-          여기 등록해두면 매일 판매목록 짤 때 클릭 몇 번으로 꺼내 쓸 수 있습니다.
-        </p>
-      </div>
-
-      <div className="card space-y-2">
-        <p className="label">엑셀로 일괄 관리</p>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">품목함</h1>
+          <p className="text-sm text-stone-500">
+            여기 등록해두면 매일 판매목록 짤 때 클릭 몇 번으로 꺼내 쓸 수 있습니다.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <a href="/api/admin/products-export" className="btn-ghost btn-sm shrink-0">
             엑셀 다운로드
           </a>
           <ImportProductsForm />
         </div>
-        <p className="text-xs text-stone-400">
-          다운로드한 파일을 열어 수정한 뒤(품목명이 같으면 수정, 없으면 새로 추가) 그대로 다시
-          업로드하면 한 번에 반영됩니다. 다른 프로그램으로 저장할 때도 CSV 형식은 그대로 두세요.
-        </p>
       </div>
 
       <form action={createProduct} className="card grid gap-3 sm:grid-cols-3">
@@ -63,77 +51,16 @@ export default async function ProductsPage() {
         </button>
       </form>
 
-      <section>
-        <h2 className="mb-2 text-sm font-bold text-stone-600">사용 중인 품목 ({active.length}개)</h2>
-        {active.length === 0 ? (
+      {active.length === 0 ? (
+        <section>
+          <h2 className="mb-2 text-sm font-bold text-stone-600">사용 중인 품목 (0개)</h2>
           <div className="card text-center text-sm text-stone-500">
             <p className="py-6">등록된 품목이 없습니다.</p>
           </div>
-        ) : (
-          <ul className="space-y-2">
-            {active.map((p) => (
-              <li key={p.id} className="card flex gap-3">
-                <ImageUploader
-                  productId={p.id}
-                  productName={p.name}
-                  hasImage={p.has_image}
-                  version={p.image_version}
-                />
-
-                <div className="min-w-0 flex-1">
-                <form action={updateProduct} className="flex flex-wrap items-end gap-2">
-                  <input type="hidden" name="id" value={p.id} />
-                  <div className="min-w-[9rem] flex-1">
-                    <label className="label text-xs">품목명</label>
-                    <input name="name" className="input py-2 text-sm" defaultValue={p.name} />
-                  </div>
-                  <div className="w-28">
-                    <label className="label text-xs">기본가격</label>
-                    <MoneyInput
-                      name="default_price"
-                      className="input py-2 text-sm"
-                      defaultValue={p.default_price}
-                    />
-                  </div>
-                  <div className="w-36">
-                    <label className="label text-xs">분류</label>
-                    <CategorySelect categories={categories} defaultValue={p.category ?? ''} />
-                  </div>
-                  <button type="submit" className="btn-ghost btn-sm">
-                    저장
-                  </button>
-                </form>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-2">
-                  <span className="text-xs text-stone-400">기본 {won(p.default_price)}</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {p.has_image && (
-                      <form action={deleteProductImage}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <button type="submit" className="btn-ghost btn-sm">
-                          사진 삭제
-                        </button>
-                      </form>
-                    )}
-                    <form action={toggleArchiveProduct}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <button type="submit" className="btn-ghost btn-sm">
-                        보관함으로
-                      </button>
-                    </form>
-                    <form action={deleteProduct}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <button type="submit" className="btn-ghost btn-sm text-red-600">
-                        삭제
-                      </button>
-                    </form>
-                  </div>
-                </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </section>
+      ) : (
+        <ActiveProductsList products={active} categories={categories} />
+      )}
 
       {archived.length > 0 && (
         <details className="card">
