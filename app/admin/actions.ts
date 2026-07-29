@@ -330,15 +330,22 @@ export async function bulkSetSale(formData: FormData) {
 
   const highlight = String(formData.get('highlight') ?? '')
   const salePrice = optionalNum(formData.get('sale_price'))
+  const discountPercent = optionalNum(formData.get('discount_percent'))
   const from = timeOfDay(formData.get('sale_from'))
   // 몇 시간 동안 할지 — 시작 시간이 있을 때만 의미가 있다. 비우면 시작 후 계속 진행(끝 시각 없음).
   const hours = from === '' ? null : optionalNum(formData.get('sale_hours'))
 
   // 세일 시각은 각 품목의 판매 날짜 기준 한국 시간으로 해석해 timestamptz 로 저장하고,
   // 종료 시각은 시작 시각 + N시간으로 계산한다 (종료 시각을 직접 받지 않는다).
+  // 세일가를 직접 입력했으면 그 값을, 아니면 할인율로 각 품목의 정가에서 계산한다.
   await sql`
     update daily_items
-       set sale_price = ${salePrice},
+       set sale_price = case
+             when ${salePrice}::int is not null then ${salePrice}::int
+             when ${discountPercent}::numeric is not null
+               then greatest(round(price * (100 - ${discountPercent}::numeric) / 100.0), 0)::int
+             else null
+           end,
            sale_starts_at = case
              when ${from} = '' then null
              else (sale_date::text || ' ' || ${from})::timestamp at time zone 'Asia/Seoul'

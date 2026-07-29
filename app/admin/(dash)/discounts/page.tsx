@@ -26,10 +26,7 @@ export default async function DiscountsPage() {
         </div>
       ) : (
         <SelectionProvider>
-          <SaleToolbarPanel
-            items={items.map((it) => ({ id: it.id, name: it.name }))}
-            defaultOpen
-          />
+          <SaleToolbarPanel items={items.map((it) => ({ id: it.id, name: it.name }))} />
 
           <ul className="space-y-2">
             {items.map((it) => (

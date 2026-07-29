@@ -73,58 +73,30 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
  * 체크한 품목들에 세일가·시간대·노출 구역을 한 번에 적용하는 패널.
  * <SelectionProvider> 안에서만 쓸 수 있다.
  */
-export function SaleToolbarPanel({
-  items,
-  defaultOpen = false,
-}: {
-  items: { id: number; name: string }[]
-  defaultOpen?: boolean
-}) {
+export function SaleToolbarPanel({ items }: { items: { id: number; name: string }[] }) {
   const { selected, clear, selectAll } = useSelection()
 
   const ids = useMemo(() => Array.from(selected), [selected])
-  const names = useMemo(
-    () => items.filter((i) => selected.has(i.id)).map((i) => i.name),
-    [items, selected],
-  )
 
   return (
-    <details className="group card space-y-3 border-brand-200 bg-brand-50/40" open={defaultOpen}>
-      <summary className="flex list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
-        <span className="cursor-pointer text-sm font-bold text-stone-700">
-          <span className="inline-block transition-transform group-open:rotate-90">▶</span>{' '}
-          세일 · 노출 구역 일괄 설정{selected.size > 0 && ` (${selected.size}개 선택됨)`}
-        </span>
-        <div className="flex shrink-0 gap-1.5">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              selectAll(items.map((i) => i.id))
-            }}
-            className="btn-ghost btn-sm"
-          >
-            전체 선택
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              clear()
-            }}
-            disabled={selected.size === 0}
-            className="btn-ghost btn-sm disabled:opacity-40"
-          >
-            선택 해제
-          </button>
-        </div>
-      </summary>
-
-      <p className="text-xs text-stone-500">
-        {selected.size === 0
-          ? '아래 목록에서 품목을 체크하면 여기서 한 번에 세일을 걸 수 있습니다.'
-          : names.join(', ')}
-      </p>
+    <div className="card space-y-3 border-brand-200 bg-brand-50/40">
+      <div className="flex justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={() => selectAll(items.map((i) => i.id))}
+          className="btn-ghost btn-sm"
+        >
+          전체 선택
+        </button>
+        <button
+          type="button"
+          onClick={clear}
+          disabled={selected.size === 0}
+          className="btn-ghost btn-sm disabled:opacity-40"
+        >
+          선택 해제
+        </button>
+      </div>
 
       <form
         action={bulkSetSale}
@@ -138,6 +110,15 @@ export function SaleToolbarPanel({
         <label className="w-24">
           <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">세일가</span>
           <MoneyInput name="sale_price" className="input px-2 py-1.5 text-sm" placeholder="예: 3500" />
+        </label>
+        <label className="w-20">
+          <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">할인율(%)</span>
+          <input
+            name="discount_percent"
+            className="input px-2 py-1.5 text-sm"
+            inputMode="numeric"
+            placeholder="예: 20"
+          />
         </label>
         <label className="w-24">
           <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">시작</span>
@@ -169,10 +150,11 @@ export function SaleToolbarPanel({
       </form>
 
       <p className="text-[11px] text-stone-400">
-        시작 시간을 비우면 하루 종일 세일가로 팝니다. 시작 시간만 정하고 몇 시간을 비우면
-        시작 후 계속 진행됩니다(끝 시간 없음). 세일가를 비우고 적용하면 정가로 돌아갑니다.
+        세일가 또는 할인율 중 하나만 입력하세요 (둘 다 입력하면 세일가가 우선 적용됩니다). 시작
+        시간을 비우면 하루 종일 세일가로 팝니다. 시작 시간만 정하고 몇 시간을 비우면 시작 후
+        계속 진행됩니다(끝 시간 없음). 세일가·할인율을 모두 비우고 적용하면 정가로 돌아갑니다.
       </p>
-    </details>
+    </div>
   )
 }
 
