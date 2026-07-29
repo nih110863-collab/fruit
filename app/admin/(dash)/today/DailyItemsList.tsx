@@ -267,6 +267,19 @@ export default function DailyItemsList({ items }: { items: DailyItem[] }) {
                           defaultValue={it.limit_qty ?? ''}
                         />
                       </label>
+                      {it.limit_qty !== null && (
+                        <label className="w-16">
+                          <span className="mb-0.5 block text-[11px] font-semibold text-stone-500">
+                            매장판매
+                          </span>
+                          <MoneyInput
+                            name={`store_sold_qty_${it.id}`}
+                            className="input px-2 py-1.5 text-sm"
+                            placeholder="0"
+                            defaultValue={it.store_sold_qty || ''}
+                          />
+                        </label>
+                      )}
                     </div>
                   </div>
                 </li>

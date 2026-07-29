@@ -38,6 +38,7 @@ export async function listDailyItems(saleDate: string, onlyActive = false): Prom
            p.category,
            di.price,
            di.limit_qty,
+           di.store_sold_qty,
            di.sort_order,
            di.is_active,
            (p.image_data is not null) as has_image,
@@ -63,7 +64,8 @@ export async function listDailyItems(saleDate: string, onlyActive = false): Prom
   `
   return (rows as any[]).map((r) => ({
     ...r,
-    remaining: r.limit_qty === null ? null : Math.max(0, r.limit_qty - r.ordered_qty),
+    remaining:
+      r.limit_qty === null ? null : Math.max(0, r.limit_qty - r.ordered_qty - r.store_sold_qty),
     effective_price: r.sale_active ? r.sale_price : r.price,
   })) as DailyItem[]
 }

@@ -20,7 +20,9 @@ export type DailyItem = {
   sort_order: number
   is_active: boolean
   ordered_qty: number
-  /** limit_qty 가 null 이면 null (무제한) */
+  /** 수량 제한 품목 중 매장에서 직접 팔려 나간 수량 (온라인 주문과 별개) */
+  store_sold_qty: number
+  /** limit_qty 가 null 이면 null (무제한). 온라인 주문 + 매장판매를 함께 뺀 값 */
   remaining: number | null
   has_image: boolean
   image_version: number

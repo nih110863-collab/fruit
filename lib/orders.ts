@@ -39,7 +39,7 @@ export async function saveOrder(input: SaveOrderInput): Promise<SaveOrderResult>
                       and (di.sale_starts_at is null or now() >= di.sale_starts_at)
                       and (di.sale_ends_at is null or now() < di.sale_ends_at)
                      then di.sale_price else di.price end as price,
-                di.limit_qty, di.is_active, di.product_id, p.name, p.unit
+                di.limit_qty, di.store_sold_qty, di.is_active, di.product_id, p.name, p.unit
            from daily_items di
            join products p on p.id = di.product_id
           where di.id = any($1::int[]) and di.sale_date = $2::date
@@ -72,7 +72,7 @@ export async function saveOrder(input: SaveOrderInput): Promise<SaveOrderResult>
           return { ok: false as const, error: `'${item.name}' 은(는) 지금 주문할 수 없습니다.` }
         }
         if (item.limit_qty !== null) {
-          const left = item.limit_qty - (ordered.get(item.id) ?? 0)
+          const left = item.limit_qty - (ordered.get(item.id) ?? 0) - item.store_sold_qty
           if (line.qty > left) {
             return {
               ok: false as const,

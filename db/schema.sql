@@ -117,3 +117,7 @@ alter table shop_settings add column if not exists shop_name text;
 alter table shop_settings add column if not exists shop_branch text;
 alter table shop_settings add column if not exists shop_phone text;
 alter table shop_settings add column if not exists shop_openchat_url text;
+
+-- 수량 제한 품목 중 매장에서 직접 팔린 수량. 온라인 주문 수량과 별개로
+-- 남은 수량(remaining) 계산에서 함께 차감한다.
+alter table daily_items add column if not exists store_sold_qty integer not null default 0;

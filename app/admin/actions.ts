@@ -311,7 +311,8 @@ export async function bulkUpdateDailyItems(formData: FormData) {
       sql`
         update daily_items
            set price = ${num(formData.get(`price_${id}`))},
-               limit_qty = ${optionalNum(formData.get(`limit_qty_${id}`))}
+               limit_qty = ${optionalNum(formData.get(`limit_qty_${id}`))},
+               store_sold_qty = ${num(formData.get(`store_sold_qty_${id}`))}
          where id = ${id}
       `,
     ),
