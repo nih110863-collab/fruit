@@ -70,17 +70,18 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * 체크한 품목들에 세일가·시간대·노출 구역을 한 번에 적용하는 패널.
+ * '전체 선택' / '선택 해제' — 세일 설정 카드 밖에 독립적으로 배치한다.
  * <SelectionProvider> 안에서만 쓸 수 있다.
  */
-export function SaleToolbarPanel({ items }: { items: { id: number; name: string }[] }) {
+export function SelectionControls({ items }: { items: { id: number; name: string }[] }) {
   const { selected, clear, selectAll } = useSelection()
 
-  const ids = useMemo(() => Array.from(selected), [selected])
-
   return (
-    <div className="card space-y-3 border-brand-200 bg-brand-50/40">
-      <div className="flex justify-end gap-1.5">
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-xs text-stone-500">
+        {selected.size > 0 ? `${selected.size}개 선택됨` : '품목을 체크하면 한 번에 세일을 걸 수 있습니다.'}
+      </p>
+      <div className="flex shrink-0 gap-1.5">
         <button
           type="button"
           onClick={() => selectAll(items.map((i) => i.id))}
@@ -97,7 +98,21 @@ export function SaleToolbarPanel({ items }: { items: { id: number; name: string 
           선택 해제
         </button>
       </div>
+    </div>
+  )
+}
 
+/**
+ * 체크한 품목들에 세일가·시간대·노출 구역을 한 번에 적용하는 패널.
+ * <SelectionProvider> 안에서만 쓸 수 있다.
+ */
+export function SaleToolbarPanel() {
+  const { selected, clear } = useSelection()
+
+  const ids = useMemo(() => Array.from(selected), [selected])
+
+  return (
+    <div className="card space-y-3 border-brand-200 bg-brand-50/40">
       <form
         action={bulkSetSale}
         onSubmit={() => setTimeout(clear, 0)}
